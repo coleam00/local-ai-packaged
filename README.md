@@ -43,7 +43,7 @@ privately interact with your local models and N8N agents
 builder that pairs very well with n8n
 
 ✅ [**Qdrant**](https://qdrant.tech/) - Open-source, high performance vector
-store with an comprehensive API. Even though you can use Supabase for RAG, this was
+store with a comprehensive API. Even though you can use Supabase for RAG, this was
 kept unlike Postgres since it's faster than Supabase so sometimes is the better option.
 
 ✅ [**SearXNG**](https://searxng.org/) - Open-source, free internet metasearch engine which aggregates 
