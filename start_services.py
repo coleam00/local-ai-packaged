@@ -8,12 +8,13 @@ so they appear together in Docker Desktop.
 """
 
 import os
-import subprocess
-import shutil
-import time
-import argparse
-import platform
 import sys
+import time
+import json
+import shutil
+import argparse
+import subprocess
+import platform
 
 def run_command(cmd, cwd=None):
     """Run a shell command and print it."""
@@ -60,9 +61,17 @@ def stop_existing_containers():
 def start_supabase():
     """Start the Supabase services (using its compose file)."""
     print("Starting Supabase services...")
-    run_command([
-        "docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml", "up", "-d"
-    ])
+    
+    # Start all Supabase services at once
+    try:
+        subprocess.run(
+            ["docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml", "up", "-d", "--remove-orphans"],
+            check=True
+        )
+        print("All Supabase services started successfully!")
+    except subprocess.CalledProcessError as e:
+        print(f"Error starting Supabase services: {e}")
+        print("Attempting to continue despite errors...")
 
 def start_local_ai(profile=None):
     """Start the local AI services (using its compose file)."""
