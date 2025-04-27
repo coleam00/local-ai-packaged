@@ -177,7 +177,7 @@ def check_and_fix_docker_compose_for_searxng():
                 # Check if uwsgi.ini exists inside the container
                 container_check = subprocess.run(
                     ["docker", "exec", container_name, "sh", "-c", "[ -f /etc/searxng/uwsgi.ini ] && echo 'found' || echo 'not_found'"],
-                    capture_output=True, text=True, check=True
+                    capture_output=True, text=True, check=False
                 )
                 
                 if "found" in container_check.stdout:
