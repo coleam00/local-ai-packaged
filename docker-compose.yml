@@ -1,3 +1,6 @@
+include:
+  - ./supabase/docker/docker-compose.yml
+
 volumes:
   n8n_storage:
   ollama_storage:

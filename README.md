@@ -266,10 +266,10 @@ To update all containers to their latest versions (n8n, Open WebUI, etc.), run t
 
 ```bash
 # Stop all services
-docker compose -p localai --profile <your-profile> -f docker-compose.yml -f supabase/docker/docker-compose.yml down
+docker compose -p localai -f docker-compose.yml --profile <your-profile> down
 
 # Pull latest versions of all containers
-docker compose -p localai --profile <your-profile> -f docker-compose.yml -f supabase/docker/docker-compose.yml pull
+docker compose -p localai -f docker-compose.yml --profile <your-profile> pull
 
 # Start services again with your desired profile
 python start_services.py --profile <your-profile>

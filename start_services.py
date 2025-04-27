@@ -46,16 +46,13 @@ def prepare_supabase_env():
     print("Copying .env in root to .env in supabase/docker...")
     shutil.copyfile(env_example_path, env_path)
 
-def stop_existing_containers():
-    """Stop and remove existing containers for our unified project ('localai')."""
+def stop_existing_containers(profile=None):
     print("Stopping and removing existing containers for the unified project 'localai'...")
-    run_command([
-        "docker", "compose",
-        "-p", "localai",
-        "-f", "docker-compose.yml",
-        "-f", "supabase/docker/docker-compose.yml",
-        "down"
-    ])
+    cmd = ["docker", "compose", "-p", "localai"]
+    if profile and profile != "none":
+        cmd.extend(["--profile", profile])
+    cmd.extend(["-f", "docker-compose.yml", "down"])
+    run_command(cmd)
 
 def start_supabase():
     """Start the Supabase services (using its compose file)."""
@@ -226,7 +223,7 @@ def main():
     generate_searxng_secret_key()
     check_and_fix_docker_compose_for_searxng()
     
-    stop_existing_containers()
+    stop_existing_containers(args.profile)
     
     # Start Supabase first
     start_supabase()
