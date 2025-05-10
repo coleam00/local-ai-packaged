@@ -5,3 +5,6 @@ shared/
 supabase/
 searxng/uwsgi.ini
 searxng/settings.yml
+
+# N8N Credentials and Sensitive Data
+n8n/backup/import/credentials/

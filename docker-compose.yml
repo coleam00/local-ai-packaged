@@ -58,6 +58,8 @@ services:
     container_name: flowise
     environment:
         - PORT=3001
+        - FLOWISE_USERNAME=${FLOWISE_USERNAME}
+        - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}  
     ports:
         - 3001:3001
     extra_hosts:
@@ -77,15 +79,15 @@ services:
     volumes:
       - open-webui:/app/backend/data
 
-  n8n-import:
-    <<: *service-n8n
-    container_name: n8n-import
-    entrypoint: /bin/sh
-    command:
-      - "-c"
-      - "n8n import:credentials --separate --input=/backup/credentials && n8n import:workflow --separate --input=/backup/workflows"
-    volumes:
-      - ./n8n/backup:/backup  
+  #n8n-import:
+  #  <<: *service-n8n
+  #  container_name: n8n-import
+  #  entrypoint: /bin/sh
+  #  command:
+  #    - "-c"
+  #    - "n8n import:credentials --separate --input=/import/credentials && n8n import:workflow --separate --input=/import/workflows"
+  #  volumes:
+  #    - ./n8n/backup:/backup  
 
   n8n:
     <<: *service-n8n
