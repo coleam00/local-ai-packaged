@@ -1,0 +1,58 @@
+x-ollama: &service-ollama
+  ports:
+    - 127.0.0.1:11434:11434
+
+services:
+  flowise:
+    ports:
+      - 127.0.0.1:3000:3000
+
+  open-webui:
+    ports:
+      - 127.0.0.1:3001:8080
+
+  n8n:
+    ports:
+      - 127.0.0.1:5678:5678
+
+  qdrant:
+    ports:
+      - 127.0.0.1:6333:6333
+
+  langfuse-worker:
+    ports:
+      - 127.0.0.1:3030:3030
+
+  langfuse-web:
+    ports:
+      - 127.0.0.1:3002:3000
+
+  clickhouse:
+    ports:
+      - 127.0.0.1:8123:8123
+      - 127.0.0.1:9000:9000
+
+  minio:
+    ports:
+      - 127.0.0.1:9090:9000
+      - 127.0.0.1:9091:9001
+
+  postgres:
+    ports:
+      - 127.0.0.1:5433:5432
+
+  searxng:
+    ports:
+      - 127.0.0.1:8080:8080
+
+  ollama-cpu:
+    profiles: ["cpu"]
+    <<: *service-ollama
+
+  ollama-gpu:
+    profiles: ["gpu-nvidia"]
+    <<: *service-ollama
+
+  ollama-gpu-amd:
+    profiles: ["gpu-amd"]
+    <<: *service-ollama

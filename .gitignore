@@ -1,0 +1,5 @@
+# Do not add nix related files
+.direnv/
+.envrc
+flake.nix
+flake.lock
