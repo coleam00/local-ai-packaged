@@ -167,6 +167,16 @@ services:
         max-size: "1m"
         max-file: "1"
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    environment:
+      - CLOUDFLARED_TOKEN=${CLOUDFLARED_TOKEN}
+    command: tunnel run
+    depends_on:
+      - caddy
+
   langfuse-worker:
     image: langfuse/langfuse-worker:3
     restart: always

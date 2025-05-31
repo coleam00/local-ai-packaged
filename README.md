@@ -232,6 +232,43 @@ to the IP address of your cloud instance.
 
    For example, A record to point n8n to [cloud instance IP] for n8n.yourdomain.com
 
+## Cloudflare Tunnel Integration
+
+This project includes a `cloudflared` service in `docker-compose.yml` that can expose any of your Caddy-managed services (like n8n, Open WebUI, Flowise, etc.) to the internet securely using [Cloudflare Tunnel](https://www.cloudflare.com/products/tunnel/). This is an alternative to directly exposing ports or managing SSL certificates publicly, as Cloudflare handles the public ingress.
+
+To use Cloudflare Tunnel:
+
+1.  **Obtain a Cloudflare Tunnel Token**:
+    *   Log in to your Cloudflare account.
+    *   Navigate to Zero Trust -> Access -> Tunnels.
+    *   Create a new tunnel. Cloudflare will provide you with a command to run `cloudflared` that includes a token, or you can find the token in the tunnel dashboard. Look for a token string (it's usually long).
+    *   For more detailed instructions, refer to the [official Cloudflare Tunnel documentation](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/).
+
+2.  **Set the Token in `.env` File**:
+    *   Once you have your token, open your `.env` file (create it from `.env.example` if you haven't already).
+    *   Add or uncomment the `CLOUDFLARED_TOKEN` variable and paste your token:
+        ```env
+        CLOUDFLARED_TOKEN=your_cloudflare_tunnel_token_here
+        ```
+    *   The `cloudflared` service in `docker-compose.yml` will automatically pick up this token and attempt to start the tunnel when you launch the services.
+
+3.  **Configure Caddy Hostnames**:
+    *   Ensure that the Caddy service is configured to respond to the public hostname you intend to use with the tunnel. For example, if you want to expose n8n via `https://n8n.yourdomain.com` through Cloudflare Tunnel, you must set this hostname in your `.env` file for Caddy:
+        ```env
+        N8N_HOSTNAME=n8n.yourdomain.com
+        LETSENCRYPT_EMAIL=your-email@example.com # Required by Caddy for SSL if using a domain
+        ```
+
+4.  **Configure Cloudflare Tunnel to Point to Caddy**:
+    *   In your Cloudflare Tunnel configuration (via the Cloudflare dashboard), you need to specify the public hostname (e.g., `n8n.yourdomain.com`) and link it to an internal service.
+    *   This internal service is Caddy. Since Caddy is running with `network_mode: host` (listening directly on your host's network ports) and `cloudflared` runs in a Docker container, `cloudflared` needs to connect to Caddy using `host.docker.internal`.
+    *   **Service URL for Cloudflare Tunnel**:
+        *   If Caddy is managing SSL for `n8n.yourdomain.com` (because `N8N_HOSTNAME` is set to this domain and `LETSENCRYPT_EMAIL` is provided), Caddy will listen on port 443 (HTTPS) on the host. Point your Cloudflare Tunnel to `https://host.docker.internal:443`. (Recommended: Cloudflare SSL mode "Full (Strict)")
+        *   If Caddy is serving HTTP for that hostname (e.g., if `N8N_HOSTNAME` was just `:8001` or if you explicitly configured HTTP in Caddyfile), point to `http://host.docker.internal:<caddy_http_port>`.
+    *   Caddy will receive the request from `cloudflared` for `n8n.yourdomain.com`, match it to the appropriate block in its `Caddyfile` (e.g., the `{$N8N_HOSTNAME}` block), and then reverse proxy it to the actual backend service (e.g., n8n on `localhost:5678` from Caddy's perspective).
+
+By following these steps, `cloudflared` will handle the public internet connection, and Caddy will manage the routing to your various internal services.
+
 ## ⚡️ Quick start and usage
 
 The main component of the self-hosted AI starter kit is a docker compose file
