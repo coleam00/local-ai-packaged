@@ -31,12 +31,12 @@ def clone_supabase_repo():
         os.chdir("supabase")
         run_command(["git", "sparse-checkout", "init", "--cone"])
         run_command(["git", "sparse-checkout", "set", "docker"])
-        run_command(["git", "checkout", "master"])
+        run_command(["git", "checkout", "v1.24.09"])
         os.chdir("..")
     else:
         print("Supabase repository already exists, updating...")
         os.chdir("supabase")
-        run_command(["git", "pull"])
+        run_command(["git", "pull", "--rebase", "origin", "v1.24.09"])
         os.chdir("..")
 
 def prepare_supabase_env():
