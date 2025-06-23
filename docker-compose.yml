@@ -89,7 +89,10 @@ services:
       - "-c"
       - "n8n import:credentials --separate --input=/backup/credentials && n8n import:workflow --separate --input=/backup/workflows"
     volumes:
-      - ./n8n/backup:/backup
+      - ./n8n/backup:/backup  
+    depends_on:
+      kong:
+        condition: service_healthy
 
   n8n:
     <<: *service-n8n
