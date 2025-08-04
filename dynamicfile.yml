@@ -1,106 +1,198 @@
 http:
   routers:
-    localai-webui:
-      rule: "Host(`localai.valuechainhackers.xyz`)"
+    open-webui:
+      rule: "Host(`openwebui.valuechainhackers.xyz`)"
       entryPoints:
         - websecure
-      service: localai-webui-service
+      service: open-webui-service
       tls:
         certResolver: myresolver
 
-    localai-n8n:
-      rule: "Host(`n8n.valuechainhackers.xyz`)"
-      entryPoints:
-        - websecure
-      service: localai-n8n-service
-      tls:
-        certResolver: myresolver
-
-    localai-flowise:
+    flowise:
       rule: "Host(`flowise.valuechainhackers.xyz`)"
       entryPoints:
         - websecure
-      service: localai-flowise-service
+      service: flowise-service
       tls:
         certResolver: myresolver
 
-    localai-supabase:
-      rule: "Host(`supabase.valuechainhackers.xyz`)"
+    n8n:
+      rule: "Host(`n8n.valuechainhackers.xyz`)"
       entryPoints:
         - websecure
-      service: localai-supabase-service
+      service: n8n-service
       tls:
         certResolver: myresolver
 
-    localai-langfuse:
+    ollama:
+      rule: "Host(`ollama.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: ollama-service
+      tls:
+        certResolver: myresolver
+
+    searxng:
+      rule: "Host(`searx.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: searxng-service
+      tls:
+        certResolver: myresolver
+
+    langfuse:
       rule: "Host(`langfuse.valuechainhackers.xyz`)"
       entryPoints:
         - websecure
-      service: localai-langfuse-service
+      service: langfuse-service
       tls:
         certResolver: myresolver
 
-    localai-searx:
-      rule: "Host(`search.valuechainhackers.xyz`)"
-      entryPoints:
-        - websecure
-      service: localai-searx-service
-      tls:
-        certResolver: myresolver
-
-    localai-qdrant:
-      rule: "Host(`qdrant.valuechainhackers.xyz`)"
-      entryPoints:
-        - websecure
-      service: localai-qdrant-service
-      tls:
-        certResolver: myresolver
-
-    localai-neo4j:
+    neo4j:
       rule: "Host(`neo4j.valuechainhackers.xyz`)"
       entryPoints:
         - websecure
-      service: localai-neo4j-service
+      service: neo4j-service
+      tls:
+        certResolver: myresolver
+
+    clickhouse:
+      rule: "Host(`clickhouse.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: clickhouse-service
+      tls:
+        certResolver: myresolver
+
+    redis:
+      rule: "Host(`redis.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: redis-service
+      tls:
+        certResolver: myresolver
+
+    qdrant:
+      rule: "Host(`qdrant.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: qdrant-service
+      tls:
+        certResolver: myresolver
+
+    supabase-studio:
+      rule: "Host(`studio.supabase.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: supabase-studio-service
+      tls:
+        certResolver: myresolver
+
+    supabase-rest:
+      rule: "Host(`rest.supabase.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: supabase-rest-service
+      tls:
+        certResolver: myresolver
+
+    supabase-kong:
+      rule: "Host(`api.supabase.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: supabase-kong-service
+      tls:
+        certResolver: myresolver
+
+    supabase-analytics:
+      rule: "Host(`analytics.supabase.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: supabase-analytics-service
+      tls:
+        certResolver: myresolver
+
+    fallback:
+      rule: "HostRegexp(`{host:.+}`)"
+      entryPoints:
+        - websecure
+      service: fallback-service
+      priority: 1
       tls:
         certResolver: myresolver
 
   services:
-    localai-webui-service:
+    open-webui-service:
       loadBalancer:
         servers:
-          - url: "http://10.0.4.15:3000"  # Open WebUI
+          - url: "http://open-webui:8080"
 
-    localai-n8n-service:
+    flowise-service:
       loadBalancer:
         servers:
-          - url: "http://10.0.4.15:5678"
+          - url: "http://flowise:3001"
 
-    localai-flowise-service:
+    n8n-service:
       loadBalancer:
         servers:
-          - url: "http://10.0.4.15:3001"
+          - url: "http://n8n:5678"
 
-    localai-supabase-service:
+    ollama-service:
       loadBalancer:
         servers:
-          - url: "http://10.0.4.15:8000"  # Kong or PostgREST frontend
+          - url: "http://ollama:11434"
 
-    localai-langfuse-service:
+    searxng-service:
       loadBalancer:
         servers:
-          - url: "http://10.0.4.15:3002"
+          - url: "http://searxng:8080"
 
-    localai-searx-service:
+    langfuse-service:
       loadBalancer:
         servers:
-          - url: "http://10.0.4.15:8080"
+          - url: "http://localai-langfuse-web-1:3000"
 
-    localai-qdrant-service:
+    neo4j-service:
       loadBalancer:
         servers:
-          - url: "http://10.0.4.15:6333"
+          - url: "http://localai-neo4j-1:7474"
 
-    localai-neo4j-service:
+    clickhouse-service:
       loadBalancer:
         servers:
-          - url: "http://10.0.4.15:7474"
+          - url: "http://localai-clickhouse-1:8123"
+
+    redis-service:
+      loadBalancer:
+        servers:
+          - url: "http://redis:6379"
+
+    qdrant-service:
+      loadBalancer:
+        servers:
+          - url: "http://qdrant:6333"
+
+    supabase-studio-service:
+      loadBalancer:
+        servers:
+          - url: "http://supabase-studio:3000"
+
+    supabase-rest-service:
+      loadBalancer:
+        servers:
+          - url: "http://supabase-rest:3000"
+
+    supabase-kong-service:
+      loadBalancer:
+        servers:
+          - url: "http://supabase-kong:8000"
+
+    supabase-analytics-service:
+      loadBalancer:
+        servers:
+          - url: "http://supabase-analytics:4000"
+
+    fallback-service:
+      loadBalancer:
+        servers:
+          - url: "http://open-webui:8080"
