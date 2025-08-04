@@ -1,0 +1,52 @@
+#!/bin/bash
+set -e
+
+echo "🚀 Starting full setup for local-ai-packaged on Debian 12..."
+
+### 1. Update & install dependencies
+echo "🔧 Installing core packages..."
+apt update && apt install -y \
+  curl \
+  wget \
+  git \
+  python3 \
+  python3-pip \
+  unzip \
+  ca-certificates \
+  gnupg \
+  lsb-release \
+  software-properties-common
+
+### 2. Install Docker (official script)
+echo "🐳 Installing Docker..."
+curl -fsSL https://get.docker.com | sh
+
+### 3. Install Docker Compose v2 plugin
+echo "🔧 Installing Docker Compose plugin..."
+mkdir -p /usr/local/lib/docker/cli-plugins
+DOCKER_COMPOSE_VERSION="v2.23.3"
+curl -SL "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+### 4. Clone repo
+echo "📁 Cloning local-ai-packaged..."
+cd /opt
+git clone https://github.com/coleam00/local-ai-packaged.git
+cd local-ai-packaged
+
+### 5. Configure .env
+echo "📄 Setting up .env configuration..."
+cp .env.example .env
+
+# Patch required pool size env to avoid Supabase failure
+if ! grep -q "POOLER_DB_POOL_SIZE" .env; then
+  echo "POOLER_DB_POOL_SIZE=5" >> .env
+fi
+
+### 6. Start the full CPU stack (safe for generic VPS or LXC containers)
+echo "🚀 Launching stack with CPU profile..."
+python3 start_services.py --profile cpu
+
+echo "✅ Stack launched. Services running internally."
+echo "👉 Use Traefik to route traffic to internal IP + service ports (e.g. WebUI: 3000, n8n: 5678, etc.)"
