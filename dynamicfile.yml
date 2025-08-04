@@ -1,0 +1,106 @@
+http:
+  routers:
+    localai-webui:
+      rule: "Host(`localai.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: localai-webui-service
+      tls:
+        certResolver: myresolver
+
+    localai-n8n:
+      rule: "Host(`n8n.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: localai-n8n-service
+      tls:
+        certResolver: myresolver
+
+    localai-flowise:
+      rule: "Host(`flowise.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: localai-flowise-service
+      tls:
+        certResolver: myresolver
+
+    localai-supabase:
+      rule: "Host(`supabase.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: localai-supabase-service
+      tls:
+        certResolver: myresolver
+
+    localai-langfuse:
+      rule: "Host(`langfuse.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: localai-langfuse-service
+      tls:
+        certResolver: myresolver
+
+    localai-searx:
+      rule: "Host(`search.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: localai-searx-service
+      tls:
+        certResolver: myresolver
+
+    localai-qdrant:
+      rule: "Host(`qdrant.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: localai-qdrant-service
+      tls:
+        certResolver: myresolver
+
+    localai-neo4j:
+      rule: "Host(`neo4j.valuechainhackers.xyz`)"
+      entryPoints:
+        - websecure
+      service: localai-neo4j-service
+      tls:
+        certResolver: myresolver
+
+  services:
+    localai-webui-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.4.15:3000"  # Open WebUI
+
+    localai-n8n-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.4.15:5678"
+
+    localai-flowise-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.4.15:3001"
+
+    localai-supabase-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.4.15:8000"  # Kong or PostgREST frontend
+
+    localai-langfuse-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.4.15:3002"
+
+    localai-searx-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.4.15:8080"
+
+    localai-qdrant-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.4.15:6333"
+
+    localai-neo4j-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.4.15:7474"
