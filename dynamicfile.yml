@@ -1,7 +1,7 @@
 http:
   routers:
     open-webui:
-      rule: "Host(`open-webui.valuechainhackers.xyz`)"
+      rule: "Host(`openwebui.valuechainhackers.xyz`)"
       entryPoints: [websecure]
       service: open-webui-service
       tls: { certResolver: myresolver }
@@ -99,60 +99,60 @@ http:
   services:
     open-webui-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:8080" }]
+        servers: [{ url: "http://10.0.7.42:8080" }]
 
     flowise-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:3001" }]
+        servers: [{ url: "http://10.0.7.42:3001" }]
 
     n8n-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:5678" }]
+        servers: [{ url: "http://10.0.7.42:5678" }]
 
     ollama-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:11434" }]
+        servers: [{ url: "http://10.0.7.42:11434" }]
 
     searxng-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:8081" }]
+        servers: [{ url: "http://10.0.7.42:8081" }]
 
     langfuse-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:3000" }]
+        servers: [{ url: "http://10.0.7.42:3000" }]
 
     neo4j-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:7474" }]
+        servers: [{ url: "http://10.0.7.42:7474" }]
 
     clickhouse-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:8123" }]
+        servers: [{ url: "http://10.0.7.42:8123" }]
 
     redis-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:6379" }]
+        servers: [{ url: "http://10.0.7.42:6379" }]
 
     qdrant-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:6333" }]
+        servers: [{ url: "http://10.0.7.42:6333" }]
 
     analytics-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:4000" }]
+        servers: [{ url: "http://10.0.7.42:4000" }]
 
     kong-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:8000" }]
+        servers: [{ url: "http://10.0.7.42:8000" }]
 
     meta-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:8080" }]
+        servers: [{ url: "http://10.0.7.42:8080" }]
 
     storage-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:5000" }]
+        servers: [{ url: "http://10.0.7.42:5000" }]
 
     imgproxy-service:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.20:8080" }]
+        servers: [{ url: "http://10.0.7.42:8080" }]
