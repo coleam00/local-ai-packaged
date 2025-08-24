@@ -1,0 +1,174 @@
+http:
+  # ====================================================================================
+  # MIDDLEWARES (Best Practices)
+  # ====================================================================================
+  middlewares:
+    secure-headers:
+      headers:
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: true
+        contentSecurityPolicy: "default-src 'self'"
+    compress-config:
+      compress: {}
+    default-chain:
+      chain:
+        middlewares:
+          - secure-headers
+          - compress-config
+
+  # ====================================================================================
+  # ROUTERS (Mapping Hostnames to Services)
+  # ====================================================================================
+  routers:
+    openwebui:
+      rule: "Host(`openwebui.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: open-webui-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    flowise:
+      rule: "Host(`flowise.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: flowise-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    n8n:
+      rule: "Host(`n8n.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: n8n-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    ollama:
+      rule: "Host(`ollama.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: ollama-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    searxng:
+      rule: "Host(`searxng.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: searxng-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    langfuse:
+      rule: "Host(`langfuse.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: langfuse-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    neo4j:
+      rule: "Host(`neo4j.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: neo4j-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    clickhouse:
+      rule: "Host(`clickhouse.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: clickhouse-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    minio:
+      rule: "Host(`minio.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: minio-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    qdrant:
+      rule: "Host(`qdrant.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: qdrant-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    supabase-analytics:
+      rule: "Host(`analytics.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: analytics-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    supabase-kong:
+      rule: "Host(`kong.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: kong-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    supabase-meta:
+      rule: "Host(`meta.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: meta-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    supabase-storage:
+      rule: "Host(`storage.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: storage-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    supabase-imgproxy:
+      rule: "Host(`imgproxy.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: imgproxy-service
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+    fallback:
+      rule: "HostRegexp(`{host:.+}`)"
+      entryPoints: [websecure]
+      service: open-webui-service
+      priority: 1
+      middlewares: [default-chain]
+      tls: { certResolver: myresolver }
+
+  # ====================================================================================
+  # SERVICES (Pointing to the Correct Backend IP:Port)
+  # ====================================================================================
+  services:
+    open-webui-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:8088" }] # <-- UPDATED PORT
+    flowise-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:3001" }]
+    n8n-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:5678" }]
+    ollama-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:11434" }]
+    searxng-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:8081" }]
+    langfuse-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:3000" }]
+    neo4j-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:7474" }]
+    clickhouse-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:8123" }]
+    minio-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:9011" }]
+    qdrant-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:6333" }]
+    analytics-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:4000" }]
+    kong-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:8000" }]
+    meta-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:8080" }] # <-- CORRECTED PORT
+    storage-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:5000" }]
+    imgproxy-service:
+      loadBalancer:
+        servers: [{ url: "http://10.0.8.42:8083" }] # <-- UPDATED PORT

@@ -1,0 +1,86 @@
+http:
+  routers:
+    r-openwebui:
+      rule: Host(`openwebui.valuechainhackers.xyz`)
+      entryPoints: ["websecure"]
+      tls: {}
+      service: s-openwebui
+
+    r-flowise:
+      rule: Host(`flowise.valuechainhackers.xyz`)
+      entryPoints: ["websecure"]
+      tls: {}
+      service: s-flowise
+
+    r-n8n:
+      rule: Host(`n8n.valuechainhackers.xyz`)
+      entryPoints: ["websecure"]
+      tls: {}
+      service: s-n8n
+
+    r-searxng:
+      rule: Host(`searxng.valuechainhackers.xyz`)
+      entryPoints: ["websecure"]
+      tls: {}
+      service: s-searxng
+
+    r-langfuse:
+      rule: Host(`langfuse.valuechainhackers.xyz`)
+      entryPoints: ["websecure"]
+      tls: {}
+      service: s-langfuse
+
+    r-neo4j:
+      rule: Host(`neo4j.valuechainhackers.xyz`)
+      entryPoints: ["websecure"]
+      tls: {}
+      service: s-neo4j
+
+    r-ollama:
+      rule: Host(`ollama.valuechainhackers.xyz`)
+      entryPoints: ["websecure"]
+      tls: {}
+      service: s-ollama
+
+  services:
+    s-openwebui:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://10.0.8.42:3000"
+
+    s-flowise:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://10.0.8.42:3001"
+
+    s-n8n:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://10.0.8.42:5678"
+
+    s-searxng:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://10.0.8.42:8080"
+
+    s-langfuse:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://10.0.8.42:3100"
+
+    s-neo4j:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://10.0.8.42:7474"
+
+    s-ollama:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "http://10.0.8.42:11434"
