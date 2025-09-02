@@ -1,5 +1,10 @@
 # Self-hosted AI Package
 
+- [ ] Check the Traefic Setup
+- [ ] Try non-caddy with rewrite ports docker deploy
+- [ ]
+
+
 **Self-hosted AI Package** is an open, docker compose template that
 quickly bootstraps a fully featured Local AI and Low Code development
 environment including Ollama for your local LLMs, Open WebUI for an interface to chat with your N8N agents, and Supabase for your database, vector store, and authentication. 

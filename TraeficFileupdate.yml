@@ -1,0 +1,9 @@
+entryPoints:
+  websecure:
+    address: ":443"
+  bolt:
+    address: ":17687"
+  redis:
+    address: ":16379"
+  chnative:
+    address: ":19000"

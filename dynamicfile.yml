@@ -1,158 +1,241 @@
+# traefik/dynamic/local-ai.yml
+# File provider dynamic config
+# Docs: providers/file, routers/services/middlewares, TCP routers. 
+# https://doc.traefik.io/traefik/providers/file/
+# https://doc.traefik.io/traefik/routing/routers/
+# https://doc.traefik.io/traefik/routing/services/
+# https://doc.traefik.io/traefik/middlewares/overview/
+
 http:
+  middlewares:
+    # Reusable security headers (safe baseline; tune CSP per app)
+    secHeaders:
+      headers:
+        sslRedirect: true
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "no-referrer-when-downgrade"
+        frameDeny: true
+    # Gzip compression
+    gzip:
+      compress: {}
+
+    # Example: lock down admin-y UIs to your LAN (uncomment + adjust range)
+    # allowLAN:
+    #   ipAllowList:
+    #     sourceRange:
+    #       - "10.0.0.0/8"
+    #       - "192.168.0.0/16"
+
   routers:
     open-webui:
-      rule: "Host(`openwebui.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: open-webui-service
+      rule: "Host(`accept.openwebui.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: open-webui-svc
+      middlewares: [ secHeaders, gzip ]        # , allowLAN
       tls: { certResolver: myresolver }
 
     flowise:
-      rule: "Host(`flowise.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: flowise-service
+      rule: "Host(`accept.flowise.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: flowise-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
     n8n:
-      rule: "Host(`n8n.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: n8n-service
+      rule: "Host(`accept.n8n.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: n8n-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
     ollama:
-      rule: "Host(`ollama.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: ollama-service
+      rule: "Host(`accept.ollama.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: ollama-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
     searxng:
-      rule: "Host(`searxng.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: searxng-service
+      rule: "Host(`accept.searxng.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: searxng-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
     langfuse:
-      rule: "Host(`langfuse.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: langfuse-service
+      rule: "Host(`deacacceptceptv.langfuse.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: langfuse-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
-    neo4j:
-      rule: "Host(`neo4j.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: neo4j-service
+    neo4j-http:
+      rule: "Host(`accept.neo4j.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: neo4j-http-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
-    clickhouse:
-      rule: "Host(`clickhouse.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: clickhouse-service
-      tls: { certResolver: myresolver }
-
-    redis:
-      rule: "Host(`redis.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: redis-service
+    clickhouse-http:
+      rule: "Host(`accept.clickhouse.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: clickhouse-http-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
     qdrant:
-      rule: "Host(`qdrant.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: qdrant-service
+      rule: "Host(`accept.qdrant.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: qdrant-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
+    # Supabase (HTTP parts). Keep only the ones you actually expose.
     supabase-analytics:
-      rule: "Host(`analytics.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: analytics-service
+      rule: "Host(`accept.analytics.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: analytics-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
     supabase-kong:
-      rule: "Host(`kong.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: kong-service
+      rule: "Host(`accept.kong.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: kong-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
     supabase-meta:
-      rule: "Host(`meta.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: meta-service
+      rule: "Host(`accept.meta.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: meta-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
     supabase-storage:
-      rule: "Host(`storage.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: storage-service
+      rule: "Host(`accept.storage.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: storage-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
     supabase-imgproxy:
-      rule: "Host(`imgproxy.valuechainhackers.xyz`)"
-      entryPoints: [websecure]
-      service: imgproxy-service
+      rule: "Host(`accept.imgproxy.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: imgproxy-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
+    # Optional catch-all to a safe UI (can remove if undesired)
     fallback:
       rule: "HostRegexp(`{host:.+}`)"
-      entryPoints: [websecure]
-      service: open-webui-service  # Or another static fallback
+      entryPoints: [ websecure ]
+      service: open-webui-svc
+      middlewares: [ secHeaders, gzip ]
       tls: { certResolver: myresolver }
 
   services:
-    open-webui-service:
+    open-webui-svc:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.42:8080" }]
+        servers:
+          - url: "http://10.0.7.42:18080"
+    flowise-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:13001"
+    n8n-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:15678"
+    ollama-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:11434"
+    searxng-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:18081"
+    langfuse-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:13000"
+    neo4j-http-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:17474"
+    clickhouse-http-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:18123"
+    qdrant-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:16333"
 
-    flowise-service:
+    # Supabase HTTP backends (adjust to your supabase compose)
+    analytics-svc:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.42:3001" }]
+        servers:
+          - url: "http://10.0.7.42:4000"
+    kong-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:8000"
+    meta-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:8080"
+    storage-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:5000"
+    imgproxy-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.42:8080"
 
-    n8n-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:5678" }]
+# TCP routing for non-HTTP protocols (Bolt, Redis, ClickHouse Native)
+# Docs: https://doc.traefik.io/traefik/routing/overview/ (TCP), community notes for Bolt/DBs.
+tcp:
+  # define entryPoints in static config (e.g., bolt, redis, chnative) that Traefik listens on
+  routers:
+    neo4j-bolt:
+      entryPoints: [ bolt ]           # e.g., :17687 on Traefik host
+      rule: "HostSNI(`*`)"
+      service: neo4j-bolt-svc
+      # Optional: restrict by IPs
+      # middlewares: [ bolt-allow ]
+    redis:
+      entryPoints: [ redis ]          # e.g., :16379
+      rule: "HostSNI(`*`)"
+      service: redis-svc
+    clickhouse-native:
+      entryPoints: [ chnative ]       # e.g., :19000
+      rule: "HostSNI(`*`)"
+      service: clickhouse-native-svc
 
-    ollama-service:
+  services:
+    neo4j-bolt-svc:
       loadBalancer:
-        servers: [{ url: "http://10.0.7.42:11434" }]
+        servers:
+          - address: "10.0.7.42:17687"
+    redis-svc:
+      loadBalancer:
+        servers:
+          - address: "10.0.7.42:16379"
+    clickhouse-native-svc:
+      loadBalancer:
+        servers:
+          - address: "10.0.7.42:19000"
 
-    searxng-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:8081" }]
-
-    langfuse-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:3000" }]
-
-    neo4j-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:7474" }]
-
-    clickhouse-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:8123" }]
-
-    redis-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:6379" }]
-
-    qdrant-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:6333" }]
-
-    analytics-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:4000" }]
-
-    kong-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:8000" }]
-
-    meta-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:8080" }]
-
-    storage-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:5000" }]
-
-    imgproxy-service:
-      loadBalancer:
-        servers: [{ url: "http://10.0.7.42:8080" }]
+  # Optional TCP IP allow list (Traefik v2+)
+  # middlewares:
+  #   bolt-allow:
+  #     ipAllowList:
+  #       sourceRange:
+  #         - "10.0.0.0/8"
+  #         - "192.168.0.0/16"
