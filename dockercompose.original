@@ -7,18 +7,19 @@ volumes:
   qdrant_storage:
   open-webui:
   flowise:
+  caddy-data:
+  caddy-config:
   valkey-data:
   langfuse_postgres_data:
   langfuse_clickhouse_data:
   langfuse_clickhouse_logs:
   langfuse_minio_data:
 
-
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
   environment:
     - DB_TYPE=postgresdb
-    - DB_POSTGRESDB_HOST=db          # <— Supabase Postgres
+    - DB_POSTGRESDB_HOST=db
     - DB_POSTGRESDB_USER=postgres
     - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
     - DB_POSTGRESDB_DATABASE=postgres
@@ -26,17 +27,14 @@ x-n8n: &service-n8n
     - N8N_PERSONALIZATION_ENABLED=false
     - N8N_ENCRYPTION_KEY
     - N8N_USER_MANAGEMENT_JWT_SECRET
-    # optional: public URL fronted by Traefik for webhooks
-    - WEBHOOK_URL=https://accept.n8n.valuechainhackers.xyz
+    - WEBHOOK_URL=${N8N_HOSTNAME:+https://}${N8N_HOSTNAME:-http://localhost:5678}
 
-    
 x-ollama: &service-ollama
   image: ollama/ollama:latest
   container_name: ollama
   restart: unless-stopped
-  # external + internal
-  ports:
-    - "11434:11434"
+  expose:
+    - 11434/tcp
   environment:
     - OLLAMA_CONTEXT_LENGTH=8192
     - OLLAMA_FLASH_ATTENTION=1
@@ -60,24 +58,24 @@ services:
     image: flowiseai/flowise
     restart: unless-stopped
     container_name: flowise
-    ports:
-      - "13001:3001"      # avoid 3000-range used by Supabase Studio
+    expose:
+      - 3001/tcp
     environment:
-      - PORT=3001
-      - FLOWISE_USERNAME=${FLOWISE_USERNAME}
-      - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
+        - PORT=3001
+        - FLOWISE_USERNAME=${FLOWISE_USERNAME}
+        - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ~/.flowise:/root/.flowise
+        - ~/.flowise:/root/.flowise
     entrypoint: /bin/sh -c "sleep 3; flowise start"
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     restart: unless-stopped
     container_name: open-webui
-    ports:
-      - "18080:8080"      # OpenWebUI default app port is 8080
+    expose:
+      - 8080/tcp
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -97,15 +95,13 @@ services:
     <<: *service-n8n
     container_name: n8n
     restart: unless-stopped
-    ports:
-      - "15678:5678"
+    expose:
+      - 5678/tcp
     volumes:
       - n8n_storage:/home/node/.n8n
       - ./n8n/backup:/backup
       - ./shared:/data/shared
     depends_on:
-      db:
-        condition: service_healthy
       n8n-import:
         condition: service_completed_successfully
 
@@ -113,27 +109,63 @@ services:
     image: qdrant/qdrant
     container_name: qdrant
     restart: unless-stopped
-    # HTTP 6333 + gRPC 6334 (external+internal)
-    ports:
-      - "16333:6333"
-      - "16334:6334"
+    expose:
+      - 6333/tcp
+      - 6334/tcp
     volumes:
       - qdrant_storage:/qdrant/storage
 
   neo4j:
     image: neo4j:latest
     volumes:
-      - ./neo4j/logs:/logs
-      - ./neo4j/config:/config
-      - ./neo4j/data:/data
-      - ./neo4j/plugins:/plugins
-    ports:
-      - "17473:7473"
-      - "17474:7474"
-      - "17687:7687"
+        - ./neo4j/logs:/logs
+        - ./neo4j/config:/config
+        - ./neo4j/data:/data
+        - ./neo4j/plugins:/plugins
+    expose:
+      - 7473/tcp
+      - 7474/tcp
+      - 7687/tcp
     environment:
-      - NEO4J_AUTH=${NEO4J_AUTH:-"neo4j/your_password"}
+        - NEO4J_AUTH=${NEO4J_AUTH:-"neo4j/your_password"}
     restart: always
+
+  caddy:
+    container_name: caddy
+    image: docker.io/library/caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - 80:80/tcp
+      - 443:443/tcp
+    expose:
+      - 2019/tcp
+      - 443/tcp
+      - 443/udp
+      - 80/tcp
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-addon:/etc/caddy/addons:ro
+      - caddy-data:/data:rw
+      - caddy-config:/config:rw
+    environment:
+      - N8N_HOSTNAME=${N8N_HOSTNAME:-":8001"}
+      - WEBUI_HOSTNAME=${WEBUI_HOSTNAME:-":8002"}
+      - FLOWISE_HOSTNAME=${FLOWISE_HOSTNAME:-":8003"}
+      - OLLAMA_HOSTNAME=${OLLAMA_HOSTNAME:-":8004"}
+      - SUPABASE_HOSTNAME=${SUPABASE_HOSTNAME:-":8005"}
+      - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME:-":8006"}
+      - LANGFUSE_HOSTNAME=${LANGFUSE_HOSTNAME:-":8007"}
+      - NEO4J_HOSTNAME=${NEO4J_HOSTNAME:-":8008"}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-internal}
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
 
   langfuse-worker:
     image: langfuse/langfuse-worker:3
@@ -147,8 +179,8 @@ services:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
-    ports:
-      - "13030:3030"
+    expose:
+     - 3030/tcp
     environment: &langfuse-worker-env
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
       SALT: ${LANGFUSE_SALT}
@@ -197,8 +229,8 @@ services:
     image: langfuse/langfuse:3
     restart: always
     depends_on: *langfuse-depends-on
-    ports:
-      - "13000:3000"
+    expose:
+      - 3000/tcp
     environment:
       <<: *langfuse-worker-env
       NEXTAUTH_URL: http://localhost:3002
@@ -217,10 +249,10 @@ services:
     image: clickhouse/clickhouse-server
     restart: always
     user: "101:101"
-    ports:
-      - "18123:8123"
-      - "19000:9000"
-      - "19009:9009"
+    expose:
+      - 8123/tcp
+      - 9000/tcp
+      - 9009/tcp
     environment:
       CLICKHOUSE_DB: default
       CLICKHOUSE_USER: clickhouse
@@ -239,10 +271,11 @@ services:
     image: minio/minio
     restart: always
     entrypoint: sh
+    # create the 'langfuse' bucket before starting the service
     command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
-    ports:
-      - "19010:9000"
-      - "19011:9001"
+    expose:
+      - 9000/tcp
+      - 9001/tcp
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -263,9 +296,8 @@ services:
       interval: 3s
       timeout: 3s
       retries: 10
-    # avoid Supabase Postgres 5432 outside
-    ports:
-      - "15433:5432"
+    expose:
+      - 5432/tcp
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -278,8 +310,8 @@ services:
     image: docker.io/valkey/valkey:8-alpine
     command: valkey-server --save 30 1 --loglevel warning
     restart: unless-stopped
-    ports:
-      - "16379:6379"
+    expose:
+      - 6379/tcp
     volumes:
       - valkey-data:/data
     cap_drop:
@@ -303,8 +335,8 @@ services:
     container_name: searxng
     image: docker.io/searxng/searxng:latest
     restart: unless-stopped
-    ports:
-      - "18081:8080"
+    expose:
+      - 8080/tcp
     volumes:
       - ./searxng:/etc/searxng:rw
     environment:
@@ -317,6 +349,11 @@ services:
       - CHOWN
       - SETGID
       - SETUID
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
 
   ollama-cpu:
     profiles: ["cpu"]
@@ -358,4 +395,4 @@ services:
     <<: *init-ollama
     image: ollama/ollama:rocm
     depends_on:
-      - ollama-gpu-amd
+     - ollama-gpu-amd

@@ -4,7 +4,8 @@
 - [ ] Try non-caddy with rewrite ports docker deploy
 - [ ]
 
-
+ python3 start_services.py --profile cpu
+ python3 start_services.py --profile cpu --environment private
 **Self-hosted AI Package** is an open, docker compose template that
 quickly bootstraps a fully featured Local AI and Low Code development
 environment including Ollama for your local LLMs, Open WebUI for an interface to chat with your N8N agents, and Supabase for your database, vector store, and authentication. 

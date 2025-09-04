@@ -1,0 +1,68 @@
+# Only remap Supabase ports so they don’t collide with your stack.
+# Everything still talks on the default docker network.
+
+services:
+  # Postgres for Supabase (internal only)
+  db:
+    ports: []   # don't publish 5432 on host; other services use db:5432 internally
+
+  # API gateway (Kong) — the only one upstream exposes by default
+  kong:
+    # upstream uses ${KONG_HTTP_PORT}:8000 and ${KONG_HTTPS_PORT}:8443
+    # we pin to a safe range so Traefik can reach it without conflicts
+    ports:
+      - "18000:8000"
+      - "18443:8443"
+
+  # PostgREST (REST API)
+  rest:
+    ports:
+      - "18010:3000"
+
+  # Auth (GoTrue)
+  auth:
+    ports:
+      - "18020:9999"
+
+  # Realtime (Elixir)
+  realtime:
+    ports:
+      - "18030:4000"
+
+  # Storage API
+  storage:
+    ports:
+      - "15000:5000"
+
+  # Studio (admin UI)
+  studio:
+    ports:
+      - "18040:3000"
+
+  # Edge Functions (Deno runtime)
+  functions:
+    ports: []   # usually called via Kong; keep private unless you need direct access
+
+  # Analytics (Logflare)
+  analytics:
+    ports:
+      - "14000:4000"
+
+  # Imgproxy (image transform)
+  imgproxy:
+    ports:
+      - "18060:5001"
+
+  # Connection pooler / meta / vector — internal only by default
+
+  meta:
+    ports: []
+  vector:
+    profiles: ["skip-vector"]
+    # Make health always pass so other services don't block on it.
+    ports: []
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 5s
+      timeout: 2s
+      retries: 1

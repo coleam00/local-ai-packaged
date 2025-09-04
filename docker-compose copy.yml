@@ -13,12 +13,11 @@ volumes:
   langfuse_clickhouse_logs:
   langfuse_minio_data:
 
-
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
   environment:
     - DB_TYPE=postgresdb
-    - DB_POSTGRESDB_HOST=db          # <— Supabase Postgres
+    - DB_POSTGRESDB_HOST=postgres
     - DB_POSTGRESDB_USER=postgres
     - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
     - DB_POSTGRESDB_DATABASE=postgres
@@ -26,9 +25,7 @@ x-n8n: &service-n8n
     - N8N_PERSONALIZATION_ENABLED=false
     - N8N_ENCRYPTION_KEY
     - N8N_USER_MANAGEMENT_JWT_SECRET
-    # optional: public URL fronted by Traefik for webhooks
-    - WEBHOOK_URL=https://accept.n8n.valuechainhackers.xyz
-
+    - WEBHOOK_URL=${N8N_HOSTNAME:+https://}${N8N_HOSTNAME:-http://localhost:5678}
     
 x-ollama: &service-ollama
   image: ollama/ollama:latest
@@ -61,7 +58,7 @@ services:
     restart: unless-stopped
     container_name: flowise
     ports:
-      - "13001:3001"      # avoid 3000-range used by Supabase Studio
+      - "13001:3001"       # avoid 3000-range used by Supabase Studio
     environment:
       - PORT=3001
       - FLOWISE_USERNAME=${FLOWISE_USERNAME}
@@ -77,12 +74,27 @@ services:
     restart: unless-stopped
     container_name: open-webui
     ports:
-      - "18080:8080"      # OpenWebUI default app port is 8080
+      - "18080:8080"       # OpenWebUI default app port is 8080
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - open-webui:/app/backend/data
-
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - QDRANT_URL=http://qdrant:6333
+      - SEARXNG_URL=http://searxng:8080
+      - LANGFUSE_HOST=http://langfuse-web:3000
+      - WEBUI_AUTH_SECRET=${WEBUI_AUTH_SECRET}
+    depends_on:
+      - ollama:
+          condition: service_started
+      - qdrant:
+          condition: service_started
+      - searxng:
+          condition: service_started
+      - langfuse-web:
+          condition: service_started
+  
   n8n-import:
     <<: *service-n8n
     container_name: n8n-import
@@ -103,9 +115,10 @@ services:
       - n8n_storage:/home/node/.n8n
       - ./n8n/backup:/backup
       - ./shared:/data/shared
+    command: /bin/sh -c 'sleep 10 && n8n start'
     depends_on:
-      db:
-        condition: service_healthy
+      postgres:
+        condition: service_healthy 
       n8n-import:
         condition: service_completed_successfully
 
