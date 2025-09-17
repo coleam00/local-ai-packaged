@@ -1,8 +1,8 @@
 # Self-hosted AI Package
 
-- [ ] Check the Traefic Setup
-- [ ] Try non-caddy with rewrite ports docker deploy
-- [ ]
+- [x] Check the Traefic Setup
+- [x] Try non-caddy with rewrite ports docker deploy
+- [x] 
 
  python3 start_services.py --profile cpu
  python3 start_services.py --profile cpu --environment private

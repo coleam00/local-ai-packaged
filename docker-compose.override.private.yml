@@ -1,70 +1,65 @@
 services:
-  open-webui:
-    environment:
-      WEBUI_HOST: "0.0.0.0"
-      WEBUI_PORT: "8080"
-    ports:
-      - "3000:8080"          # host:3000 → container:8080
-
   flowise:
     ports:
-      - "3001:3001"
+      - 0.0.0.0:3001:3001
+
+  open-webui:
+    ports:
+      - 0.0.0.0:18080:8080   # move away from 3000 clash
 
   n8n:
     ports:
-      - "5678:5678"
+      - 0.0.0.0:15678:5678
 
   qdrant:
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      - 0.0.0.0:16333:6333
+      - 0.0.0.0:16334:6334
 
   neo4j:
     ports:
-      - "7473:7473"
-      - "7474:7474"
-      - "7687:7687"
+      - 0.0.0.0:17473:7473
+      - 0.0.0.0:17474:7474
+      - 0.0.0.0:17687:7687
 
   langfuse-worker:
     ports:
-      - "3030:3030"
+      - 0.0.0.0:13030:3030
 
   langfuse-web:
     ports:
-      - "3100:3000"          # host:3100 → container:3000
+      - 0.0.0.0:13000:3000   # give Langfuse its own space
 
   clickhouse:
     ports:
-      - "8123:8123"
-      - "9000:9000"
-      - "9009:9009"
+      - 0.0.0.0:18123:8123
+      - 0.0.0.0:19000:9000
+      - 0.0.0.0:19009:9009
 
   minio:
     ports:
-      - "9010:9000"
-      - "9011:9001"
+      - 0.0.0.0:19010:9005
+      - 0.0.0.0:19011:9001
 
   postgres:
     ports:
-      - "5433:5432"
+      - 0.0.0.0:15433:5432
 
   redis:
     ports:
-      - "6379:6379"
+      - 0.0.0.0:16379:6379
 
   searxng:
     ports:
-      - "8081:8080"          # use 8081 on host to avoid conflicts
+      - 0.0.0.0:18081:8081
 
-  # Enable the one that matches your profile (only one will run):
   ollama-cpu:
     ports:
-      - "11434:11434"
+      - 0.0.0.0:11434:11434
 
   ollama-gpu:
     ports:
-      - "11434:11434"
+      - 0.0.0.0:11435:11434  # shift if you want to run CPU+GPU side by side
 
   ollama-gpu-amd:
-    ports:
-      - "11434:11434"
+    ports: []
