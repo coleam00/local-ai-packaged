@@ -7,6 +7,8 @@
 docker login -u kamitor770
 
 
+test
+
  python3 start_services.py --profile cpu
  python3 start_services.py --profile cpu --environment private
 **Self-hosted AI Package** is an open, docker compose template that
