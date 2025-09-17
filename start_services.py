@@ -1,21 +1,10 @@
 #!/usr/bin/env python3
 """
-start_services.py  —  run the Local‑AI stack in *your* environment
-- No Supabase, no Caddy. Traefik is external.
-- Uses your existing docker-compose.yml (+ optional overrides).
-- Generates SearXNG secret on first run.
-- Works on Windows/macOS/Linux (Git Bash / PowerShell okay).
+start_services.py
 
-Usage examples:
-  python start_services.py                 # cpu profile, private overrides if present
-  python start_services.py --profile gpu-nvidia
-  python start_services.py --env public --project localai
-  python start_services.py --down          # stop stack
-
-Files auto-detected if present:
-  - docker-compose.override.yml
-  - docker-compose.override.private.yml
-  - docker-compose.override.public.yml
+This script starts the Supabase stack first, waits for it to initialize, and then starts
+the local AI stack. Both stacks use the same Docker Compose project name ("localai")
+so they appear together in Docker Desktop.
 """
 
 import os
@@ -24,167 +13,236 @@ import shutil
 import time
 import argparse
 import platform
-from pathlib import Path
+import sys
 
-PROJECT_DEFAULT = "localai"
-COMPOSE_BASE = "docker-compose.yml"
-OVERRIDE_GENERIC = "docker-compose.override.yml"
-OVERRIDE_PRIVATE = "docker-compose.override.private.yml"
-OVERRIDE_PUBLIC = "docker-compose.override.public.yml"
+def run_command(cmd, cwd=None):
+    """Run a shell command and print it."""
+    print("Running:", " ".join(cmd))
+    subprocess.run(cmd, cwd=cwd, check=True)
 
-SEARXNG_DIR = Path("searxng")
-SEARXNG_SETTINGS = SEARXNG_DIR / "settings.yml"
-SEARXNG_SETTINGS_BASE = SEARXNG_DIR / "settings-base.yml"
+def clone_supabase_repo():
+    """Clone the Supabase repository using sparse checkout if not already present."""
+    if not os.path.exists("supabase"):
+        print("Cloning the Supabase repository...")
+        run_command([
+            "git", "clone", "--filter=blob:none", "--no-checkout",
+            "https://github.com/supabase/supabase.git"
+        ])
+        os.chdir("supabase")
+        run_command(["git", "sparse-checkout", "init", "--cone"])
+        run_command(["git", "sparse-checkout", "set", "docker"])
+        run_command(["git", "checkout", "master"])
+        os.chdir("..")
+    else:
+        print("Supabase repository already exists, updating...")
+        os.chdir("supabase")
+        run_command(["git", "pull"])
+        os.chdir("..")
 
-def run(cmd, cwd=None, check=True, env=None):
-    print("➜", " ".join(cmd))
-    subprocess.run(cmd, cwd=cwd, check=check, env=env)
+def prepare_supabase_env():
+    """Copy .env to .env in supabase/docker."""
+    env_path = os.path.join("supabase", "docker", ".env")
+    env_example_path = os.path.join(".env")
+    print("Copying .env in root to .env in supabase/docker...")
+    shutil.copyfile(env_example_path, env_path)
 
-def docker_compose_cmd(project: str, profile: str, env_mode: str):
-    """
-    Build a docker compose command list with discovered override files.
-    """
-    files = [COMPOSE_BASE]
-    if Path(OVERRIDE_GENERIC).exists():
-        files.append(OVERRIDE_GENERIC)
-    if env_mode == "private" and Path(OVERRIDE_PRIVATE).exists():
-        files.append(OVERRIDE_PRIVATE)
-    if env_mode == "public" and Path(OVERRIDE_PUBLIC).exists():
-        files.append(OVERRIDE_PUBLIC)
-
-    cmd = ["docker", "compose", "-p", project]
+def stop_existing_containers(profile=None):
+    print("Stopping and removing existing containers for the unified project 'localai'...")
+    cmd = ["docker", "compose", "-p", "localai"]
     if profile and profile != "none":
-        cmd += ["--profile", profile]
-    for f in files:
-        cmd += ["-f", f]
-    return cmd
+        cmd.extend(["--profile", profile])
+    cmd.extend(["-f", "docker-compose.yml", "down"])
+    run_command(cmd)
 
-def ensure_searxng_secret():
-    """
-    Create searxng/settings.yml from settings-base.yml and replace 'ultrasecretkey'
-    with a random 32-byte hex key. Cross-platform.
-    """
-    SEARXNG_DIR.mkdir(parents=True, exist_ok=True)
-    if not SEARXNG_SETTINGS.exists():
-        if SEARXNG_SETTINGS_BASE.exists():
-            print("• Creating searxng/settings.yml from settings-base.yml")
-            shutil.copyfile(SEARXNG_SETTINGS_BASE, SEARXNG_SETTINGS)
-        else:
-            print("• Creating minimal searxng/settings.yml")
-            SEARXNG_SETTINGS.write_text("server:\n  secret_key: ultrasecretkey\n")
+def start_supabase(environment=None):
+    """Start the Supabase services (using its compose file)."""
+    print("Starting Supabase services...")
+    cmd = ["docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml"]
+    if environment and environment == "public":
+        cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])
+    cmd.extend(["up", "-d"])
+    run_command(cmd)
 
-    # Generate 32-byte hex key
+def start_local_ai(profile=None, environment=None):
+    """Start the local AI services (using its compose file)."""
+    print("Starting local AI services...")
+    cmd = ["docker", "compose", "-p", "localai"]
+    if profile and profile != "none":
+        cmd.extend(["--profile", profile])
+    cmd.extend(["-f", "docker-compose.yml"])
+    if environment and environment == "private":
+        cmd.extend(["-f", "docker-compose.override.private.yml"])
+    if environment and environment == "public":
+        cmd.extend(["-f", "docker-compose.override.public.yml"])
+    cmd.extend(["up", "-d"])
+    run_command(cmd)
+
+def generate_searxng_secret_key():
+    """Generate a secret key for SearXNG based on the current platform."""
+    print("Checking SearXNG settings...")
+
+    # Define paths for SearXNG settings files
+    settings_path = os.path.join("searxng", "settings.yml")
+    settings_base_path = os.path.join("searxng", "settings-base.yml")
+
+    # Check if settings-base.yml exists
+    if not os.path.exists(settings_base_path):
+        print(f"Warning: SearXNG base settings file not found at {settings_base_path}")
+        return
+
+    # Check if settings.yml exists, if not create it from settings-base.yml
+    if not os.path.exists(settings_path):
+        print(f"SearXNG settings.yml not found. Creating from {settings_base_path}...")
+        try:
+            shutil.copyfile(settings_base_path, settings_path)
+            print(f"Created {settings_path} from {settings_base_path}")
+        except Exception as e:
+            print(f"Error creating settings.yml: {e}")
+            return
+    else:
+        print(f"SearXNG settings.yml already exists at {settings_path}")
+
+    print("Generating SearXNG secret key...")
+
+    # Detect the platform and run the appropriate command
     system = platform.system()
+
     try:
         if system == "Windows":
-            ps = [
-                "powershell", "-NoProfile", "-Command",
-                "$rb = New-Object byte[] 32; "
-                "(New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($rb); "
-                "$k = -join ($rb | ForEach-Object { '{0:x2}' -f $_ }); "
-                "(Get-Content 'searxng/settings.yml') -replace 'ultrasecretkey', $k | "
-                "Set-Content 'searxng/settings.yml'"
+            print("Detected Windows platform, using PowerShell to generate secret key...")
+            # PowerShell command to generate a random key and replace in the settings file
+            ps_command = [
+                "powershell", "-Command",
+                "$randomBytes = New-Object byte[] 32; " +
+                "(New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes); " +
+                "$secretKey = -join ($randomBytes | ForEach-Object { \"{0:x2}\" -f $_ }); " +
+                "(Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml"
             ]
-            run(ps)
-        else:
-            # Linux/macOS
-            key = subprocess.check_output(["openssl", "rand", "-hex", "32"]).decode("utf-8").strip()
-            txt = SEARXNG_SETTINGS.read_text()
-            if "ultrasecretkey" in txt:
-                SEARXNG_SETTINGS.write_text(txt.replace("ultrasecretkey", key))
-            else:
-                # if not present, append it
-                with open(SEARXNG_SETTINGS, "a") as f:
-                    f.write(f"\nserver:\n  secret_key: {key}\n")
-        print("• SearXNG secret_key set.")
+            subprocess.run(ps_command, check=True)
+
+        elif system == "Darwin":  # macOS
+            print("Detected macOS platform, using sed command with empty string parameter...")
+            # macOS sed command requires an empty string for the -i parameter
+            openssl_cmd = ["openssl", "rand", "-hex", "32"]
+            random_key = subprocess.check_output(openssl_cmd).decode('utf-8').strip()
+            sed_cmd = ["sed", "-i", "", f"s|ultrasecretkey|{random_key}|g", settings_path]
+            subprocess.run(sed_cmd, check=True)
+
+        else:  # Linux and other Unix-like systems
+            print("Detected Linux/Unix platform, using standard sed command...")
+            # Standard sed command for Linux
+            openssl_cmd = ["openssl", "rand", "-hex", "32"]
+            random_key = subprocess.check_output(openssl_cmd).decode('utf-8').strip()
+            sed_cmd = ["sed", "-i", f"s|ultrasecretkey|{random_key}|g", settings_path]
+            subprocess.run(sed_cmd, check=True)
+
+        print("SearXNG secret key generated successfully.")
+
     except Exception as e:
-        print(f"⚠️ Could not set SearXNG secret automatically: {e}")
+        print(f"Error generating SearXNG secret key: {e}")
+        print("You may need to manually generate the secret key using the commands:")
+        print("  - Linux: sed -i \"s|ultrasecretkey|$(openssl rand -hex 32)|g\" searxng/settings.yml")
+        print("  - macOS: sed -i '' \"s|ultrasecretkey|$(openssl rand -hex 32)|g\" searxng/settings.yml")
+        print("  - Windows (PowerShell):")
+        print("    $randomBytes = New-Object byte[] 32")
+        print("    (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes)")
+        print("    $secretKey = -join ($randomBytes | ForEach-Object { \"{0:x2}\" -f $_ })")
+        print("    (Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml")
 
-def first_run_searxng_soften_caps():
-    """
-    Some environments need to relax searxng caps on first boot.
-    If docker-compose.yml contains 'cap_drop: - ALL', temporarily comment it.
-    This is idempotent and reversible (only touches a line containing that exact token).
-    """
-    path = Path(COMPOSE_BASE)
-    if not path.exists():
+def check_and_fix_docker_compose_for_searxng():
+    """Check and modify docker-compose.yml for SearXNG first run."""
+    docker_compose_path = "docker-compose.yml"
+    if not os.path.exists(docker_compose_path):
+        print(f"Warning: Docker Compose file not found at {docker_compose_path}")
         return
-    content = path.read_text()
-    marker = "cap_drop: - ALL"
-    commented = "# cap_drop: - ALL  # first-run"
-    if marker in content:
-        print("• Temporarily commenting 'cap_drop: - ALL' for SearXNG first run")
-        path.write_text(content.replace(marker, commented))
 
-def restore_searxng_caps_if_ready(project: str):
-    """
-    If searxng container is running and initialized, restore cap_drop.
-    """
     try:
-        names = subprocess.check_output(
-            ["docker", "ps", "--filter", "name=searxng", "--format", "{{.Names}}"]
-        ).decode().strip().splitlines()
-        if not names or not any(n for n in names):
-            return
-        # quick check inside container for uwsgi.ini presence
-        cname = names[0]
-        out = subprocess.run(
-            ["docker", "exec", cname, "sh", "-c", "[ -f /etc/searxng/uwsgi.ini ] && echo ok || echo no"],
-            capture_output=True, text=True
-        )
-        if out.stdout.strip() != "ok":
-            return
-        path = Path(COMPOSE_BASE)
-        if not path.exists():
-            return
-        content = path.read_text()
-        commented = "# cap_drop: - ALL  # first-run"
-        if commented in content:
-            print("• Restoring 'cap_drop: - ALL' in docker-compose.yml")
-            path.write_text(content.replace(commented, "cap_drop: - ALL"))
-    except Exception:
-        pass
+        # Read the docker-compose.yml file
+        with open(docker_compose_path, 'r') as file:
+            content = file.read()
 
-def up(project: str, profile: str, env_mode: str):
-    ensure_searxng_secret()
-    first_run_searxng_soften_caps()
+        # Default to first run
+        is_first_run = True
 
-    base_cmd = docker_compose_cmd(project, profile, env_mode)
-    env = os.environ.copy()
-    if profile and profile != "none":
-        # also export for images that read COMPOSE_PROFILES
-        env["COMPOSE_PROFILES"] = profile
+        # Check if Docker is running and if the SearXNG container exists
+        try:
+            # Check if the SearXNG container is running
+            container_check = subprocess.run(
+                ["docker", "ps", "--filter", "name=searxng", "--format", "{{.Names}}"],
+                capture_output=True, text=True, check=True
+            )
+            searxng_containers = container_check.stdout.strip().split('\n')
 
-    # up
-    run(base_cmd + ["up", "-d"], env=env)
+            # If SearXNG container is running, check inside for uwsgi.ini
+            if any(container for container in searxng_containers if container):
+                container_name = next(container for container in searxng_containers if container)
+                print(f"Found running SearXNG container: {container_name}")
 
-    # give searxng a moment, then restore caps if we changed them
-    time.sleep(3)
-    restore_searxng_caps_if_ready(project)
+                # Check if uwsgi.ini exists inside the container
+                container_check = subprocess.run(
+                    ["docker", "exec", container_name, "sh", "-c", "[ -f /etc/searxng/uwsgi.ini ] && echo 'found' || echo 'not_found'"],
+                    capture_output=True, text=True, check=False
+                )
 
-def down(project: str, profile: str, env_mode: str):
-    base_cmd = docker_compose_cmd(project, profile, env_mode)
-    run(base_cmd + ["down", "-v"])
+                if "found" in container_check.stdout:
+                    print("Found uwsgi.ini inside the SearXNG container - not first run")
+                    is_first_run = False
+                else:
+                    print("uwsgi.ini not found inside the SearXNG container - first run")
+                    is_first_run = True
+            else:
+                print("No running SearXNG container found - assuming first run")
+        except Exception as e:
+            print(f"Error checking Docker container: {e} - assuming first run")
+
+        if is_first_run and "cap_drop: - ALL" in content:
+            print("First run detected for SearXNG. Temporarily removing 'cap_drop: - ALL' directive...")
+            # Temporarily comment out the cap_drop line
+            modified_content = content.replace("cap_drop: - ALL", "# cap_drop: - ALL  # Temporarily commented out for first run")
+
+            # Write the modified content back
+            with open(docker_compose_path, 'w') as file:
+                file.write(modified_content)
+
+            print("Note: After the first run completes successfully, you should re-add 'cap_drop: - ALL' to docker-compose.yml for security reasons.")
+        elif not is_first_run and "# cap_drop: - ALL  # Temporarily commented out for first run" in content:
+            print("SearXNG has been initialized. Re-enabling 'cap_drop: - ALL' directive for security...")
+            # Uncomment the cap_drop line
+            modified_content = content.replace("# cap_drop: - ALL  # Temporarily commented out for first run", "cap_drop: - ALL")
+
+            # Write the modified content back
+            with open(docker_compose_path, 'w') as file:
+                file.write(modified_content)
+
+    except Exception as e:
+        print(f"Error checking/modifying docker-compose.yml for SearXNG: {e}")
 
 def main():
-    ap = argparse.ArgumentParser(description="Start/stop Local‑AI stack (no Supabase, Traefik external).")
-    ap.add_argument("--project", default=PROJECT_DEFAULT, help=f"Docker compose project name (default: {PROJECT_DEFAULT})")
-    ap.add_argument("--profile", choices=["cpu", "gpu-nvidia", "gpu-amd", "none"], default="cpu",
-                    help="Compose profile (default: cpu)")
-    ap.add_argument("--env", choices=["private", "public"], default="private",
-                    help="Environment to use if override files exist (default: private)")
-    ap.add_argument("--down", action="store_true", help="Stop and remove the stack")
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser(description='Start the local AI and Supabase services.')
+    parser.add_argument('--profile', choices=['cpu', 'gpu-nvidia', 'gpu-amd', 'none'], default='cpu',
+                      help='Profile to use for Docker Compose (default: cpu)')
+    parser.add_argument('--environment', choices=['private', 'public'], default='private',
+                      help='Environment to use for Docker Compose (default: private)')
+    args = parser.parse_args()
 
-    # sanity checks
-    if not Path(COMPOSE_BASE).exists():
-        print(f"❌ {COMPOSE_BASE} not found in {Path.cwd()}")
-        raise SystemExit(1)
+    clone_supabase_repo()
+    prepare_supabase_env()
 
-    if args.down:
-        down(args.project, args.profile, args.env)
-    else:
-        up(args.project, args.profile, args.env)
+    # Generate SearXNG secret key and check docker-compose.yml
+    generate_searxng_secret_key()
+    check_and_fix_docker_compose_for_searxng()
+
+    stop_existing_containers(args.profile)
+
+    # Start Supabase first
+    start_supabase(args.environment)
+
+    # Give Supabase some time to initialize
+    print("Waiting for Supabase to initialize...")
+    time.sleep(10)
+
+    # Then start the local AI services
+    start_local_ai(args.profile, args.environment)
 
 if __name__ == "__main__":
     main()

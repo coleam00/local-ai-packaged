@@ -6,6 +6,17 @@
 
 docker login -u kamitor770
 
+In the Superbase file, .superbase in the docker compose
+change the 
+ BEFORE (line ~365):
+depends_on:
+  vector:
+    condition: service_healthy
+
+# AFTER:
+depends_on:
+  vector:
+    condition: service_started
 
 test
 

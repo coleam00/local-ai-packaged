@@ -101,7 +101,7 @@ http:
 
     # Supabase Studio Dashboard (port 3000 - different from your Langfuse!)
     supabase-studio:
-      rule: "Host(`accetestpt.studio.valuechainhackers.xyz`)"
+      rule: "Host(`test.studio.valuechainhackers.xyz`)"
       entryPoints: [ websecure ]
       service: studio-svc
       middlewares: [ secHeaders, gzip ]
