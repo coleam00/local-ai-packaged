@@ -1,8 +1,32 @@
 # Self-hosted AI Package
 
+- [x] Check the Traefic Setup
+- [x] Try non-caddy with rewrite ports docker deploy
+- [x] 
+
+docker login -u kamitor770
+
+In the Superbase file, .superbase in the docker compose
+change the 
+ BEFORE (line ~365):
+depends_on:
+  vector:
+    condition: service_healthy
+
+# AFTER:
+depends_on:
+  vector:
+    condition: service_started
+
+test
+
+ python3 start_services.py --profile cpu
+ python3 start_services.py --profile cpu --environment private
 **Self-hosted AI Package** is an open, docker compose template that
 quickly bootstraps a fully featured Local AI and Low Code development
 environment including Ollama for your local LLMs, Open WebUI for an interface to chat with your N8N agents, and Supabase for your database, vector store, and authentication. 
+
+python3 start_services.py --profile cpu --environment private
 
 This is Cole's version with a couple of improvements and the addition of Supabase, Open WebUI, Flowise, Neo4j, Langfuse, SearXNG, and Caddy!
 Also, the local RAG AI Agent workflows from the video will be automatically in your 

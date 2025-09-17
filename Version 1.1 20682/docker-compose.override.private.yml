@@ -1,0 +1,65 @@
+services:
+  flowise:
+    ports:
+      - 0.0.0.0:3001:3001
+
+  open-webui:
+    ports:
+      - 0.0.0.0:18080:8080   # move away from 3000 clash
+
+  n8n:
+    ports:
+      - 0.0.0.0:15678:5678
+
+  qdrant:
+    ports:
+      - 0.0.0.0:16333:6333
+      - 0.0.0.0:16334:6334
+
+  neo4j:
+    ports:
+      - 0.0.0.0:17473:7473
+      - 0.0.0.0:17474:7474
+      - 0.0.0.0:17687:7687
+
+  langfuse-worker:
+    ports:
+      - 0.0.0.0:13030:3030
+
+  langfuse-web:
+    ports:
+      - 0.0.0.0:13000:3000   # give Langfuse its own space
+
+  clickhouse:
+    ports:
+      - 0.0.0.0:18123:8123
+      - 0.0.0.0:19000:9000
+      - 0.0.0.0:19009:9009
+
+  minio:
+    ports:
+      - 0.0.0.0:19010:9005
+      - 0.0.0.0:19011:9001
+
+  postgres:
+    ports:
+      - 0.0.0.0:15433:5432
+
+  redis:
+    ports:
+      - 0.0.0.0:16379:6379
+
+  searxng:
+    ports:
+      - 0.0.0.0:18081:8081
+
+  ollama-cpu:
+    ports:
+      - 0.0.0.0:11434:11434
+
+  ollama-gpu:
+    ports:
+      - 0.0.0.0:11435:11434  # shift if you want to run CPU+GPU side by side
+
+  ollama-gpu-amd:
+    ports: []

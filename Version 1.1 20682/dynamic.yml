@@ -1,0 +1,119 @@
+http:
+  routers:
+    openwebui-router:
+      rule: "Host(`openwebui.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: openwebui-service
+      tls:
+        certResolver: myresolver
+
+    flowise-router:
+      rule: "Host(`flowise.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: flowise-service
+      tls:
+        certResolver: myresolver
+
+    n8n-router:
+      rule: "Host(`n8n.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: n8n-service
+      tls:
+        certResolver: myresolver
+
+    qdrant-router:
+      rule: "Host(`qdrant.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: qdrant-service
+      tls:
+        certResolver: myresolver
+
+    clickhouse-router:
+      rule: "Host(`clickhouse.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: clickhouse-service
+      tls:
+        certResolver: myresolver
+
+    neo4j-router:
+      rule: "Host(`neo4j.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: neo4j-service
+      tls:
+        certResolver: myresolver
+
+    searxng-router:
+      rule: "Host(`searxng.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: searxng-service
+      tls:
+        certResolver: myresolver
+
+    ollama-router:
+      rule: "Host(`ollama.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: ollama-service
+      tls:
+        certResolver: myresolver
+
+    langfuse-router:
+      rule: "Host(`langfuse.valuechainhackers.xyz`)"
+      entryPoints: [websecure]
+      service: langfuse-service
+      tls:
+        certResolver: myresolver
+
+  services:
+    openwebui-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.6.82:18080"
+        passHostHeader: true
+
+    flowise-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.6.82:3001"
+        passHostHeader: true
+
+    n8n-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.6.82:15678" # Corrected port
+        passHostHeader: true
+
+    qdrant-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.6.82:16333" # Corrected port
+        passHostHeader: true
+
+    clickhouse-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.6.82:18123" # Corrected port
+        passHostHeader: true
+
+    neo4j-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.6.82:17474" # Corrected port
+        passHostHeader: true
+
+    searxng-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.6.82:18081" # Corrected port
+        passHostHeader: true
+
+    ollama-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.6.82:11434"
+        passHostHeader: true
+
+    langfuse-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.6.82:13000" # Corrected port
+        passHostHeader: true

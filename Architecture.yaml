@@ -1,0 +1,102 @@
+server:
+  name: "Value Chain Hackers Infrastructure"
+  external_ip: "94.142.241.156"
+  domain: "valuechainhackers.xyz"
+
+  proxmox:
+    host:
+      public_interface: vmbr0
+    firewall:
+      rules:
+        - dnat: "Public → 10.0.4.10 (Traefik LXC)"
+        - forward: "Allow traffic vmbr0 → vmbr4"
+
+  entrypoint:
+    traefik:
+      ip: "10.0.4.10"
+      role: "reverse_proxy"
+      routing:
+        dev: "*.dev.valuechainhackers.xyz"
+        test: "*.test.valuechainhackers.xyz"
+        acc: "*.valuechainhackers.xyz"
+        prod: "*.prod.valuechainhackers.xyz"
+        demonstrator: 
+          - "demonstrator.valuechainhackers.xyz"
+          - "api.demonstrator.valuechainhackers.xyz"
+          - "testdemonstrator.valuechainhackers.xyz"
+        jupyter: "jupyter.valuechainhackers.xyz"
+
+stages:
+  development:
+    network: "vmbr5"
+    cidr: "10.0.5.0/24"
+    hosts:
+      - host: "10.0.5.42"
+        role: "AI services node"
+        services:
+          - { name: open-webui, url: "dev.open-webui.valuechainhackers.xyz", port: 8080 }
+          - { name: flowise, url: "dev.flowise.valuechainhackers.xyz", port: 3001 }
+          - { name: n8n, url: "dev.n8n.valuechainhackers.xyz", port: 5678 }
+          - { name: ollama, url: "dev.ollama.valuechainhackers.xyz", port: 11434 }
+          - { name: searxng, url: "dev.searxng.valuechainhackers.xyz", port: 8081 }
+          - { name: langfuse, url: "dev.langfuse.valuechainhackers.xyz", port: 3000 }
+          - { name: neo4j, url: "dev.neo4j.valuechainhackers.xyz", port: 7474 }
+          - { name: clickhouse, url: "dev.clickhouse.valuechainhackers.xyz", port: 8123 }
+          - { name: redis, url: "dev.redis.valuechainhackers.xyz", port: 6379 }
+          - { name: qdrant, url: "dev.qdrant.valuechainhackers.xyz", port: 6333 }
+          - { name: supabase-analytics, url: "dev.analytics.valuechainhackers.xyz", port: 4000 }
+          - { name: supabase-kong, url: "dev.kong.valuechainhackers.xyz", port: 8000 }
+          - { name: supabase-meta, url: "dev.meta.valuechainhackers.xyz", port: 8080 }
+          - { name: supabase-storage, url: "dev.storage.valuechainhackers.xyz", port: 5000 }
+          - { name: supabase-imgproxy, url: "dev.imgproxy.valuechainhackers.xyz", port: 8080 }
+
+      - host: "10.0.5.13"
+        role: "Demonstrator app node"
+        services:
+          - { name: demonstrator-web, url: "demonstrator.valuechainhackers.xyz", port: 5000 }
+          - { name: demonstrator-api, url: "api.demonstrator.valuechainhackers.xyz", port: 5002 }
+          - { name: demonstrator-test, url: "testdemonstrator.valuechainhackers.xyz", port: 5003 }
+
+  test:
+    network: "vmbr6"
+    cidr: "10.0.6.0/24"
+    hosts:
+      - host: "10.0.6.15"
+        role: "JupyterHub node"
+        services:
+          - { name: jupyterhub, url: "jupyter.valuechainhackers.xyz", port: 8000 }
+
+  acceptance:
+    network: "vmbr7"
+    cidr: "10.0.7.0/24"
+    hosts:
+      - host: "10.0.7.20"
+        role: "AI services node"
+        services:
+          - { name: open-webui, url: "open-webui.valuechainhackers.xyz", port: 8080 }
+          - { name: flowise, url: "flowise.valuechainhackers.xyz", port: 3001 }
+          - { name: n8n, url: "n8n.valuechainhackers.xyz", port: 5678 }
+          - { name: ollama, url: "ollama.valuechainhackers.xyz", port: 11434 }
+          - { name: searxng, url: "searxng.valuechainhackers.xyz", port: 8081 }
+          - { name: langfuse, url: "langfuse.valuechainhackers.xyz", port: 3000 }
+          - { name: neo4j, url: "neo4j.valuechainhackers.xyz", port: 7474 }
+          - { name: clickhouse, url: "clickhouse.valuechainhackers.xyz", port: 8123 }
+          - { name: redis, url: "redis.valuechainhackers.xyz", port: 6379 }
+          - { name: qdrant, url: "qdrant.valuechainhackers.xyz", port: 6333 }
+          - { name: supabase-analytics, url: "analytics.valuechainhackers.xyz", port: 4000 }
+          - { name: supabase-kong, url: "kong.valuechainhackers.xyz", port: 8000 }
+          - { name: supabase-meta, url: "meta.valuechainhackers.xyz", port: 8080 }
+          - { name: supabase-storage, url: "storage.valuechainhackers.xyz", port: 5000 }
+          - { name: supabase-imgproxy, url: "imgproxy.valuechainhackers.xyz", port: 8080 }
+
+  production:
+    network: "vmbr8"
+    cidr: "10.0.8.0/24"
+    services: []
+
+notes:
+  - "Development: AI stack (10.0.5.42) + Demonstrator app (10.0.5.13)."
+  - "Test: JupyterHub (10.0.6.15)."
+  - "Acceptance: AI stack (10.0.7.20)."
+  - "Production: defined but not yet populated."
+  - "Traefik (10.0.4.10) terminates TLS and routes by hostname."
