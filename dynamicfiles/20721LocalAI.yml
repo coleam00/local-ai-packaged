@@ -1,0 +1,277 @@
+# traefik/dynamic/accept-ai.yml
+# RESEARCHED & ACCURATE Supabase ports - Based on official supabase/supabase repo
+
+http:
+  middlewares:
+    secHeaders:
+      headers:
+        sslRedirect: true
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "no-referrer-when-downgrade"
+        frameDeny: true
+    
+    gzip:
+      compress: {}
+
+    allowLAN:
+      ipAllowList:
+        sourceRange:
+          - "10.0.0.0/8"
+          - "192.168.0.0/16"
+
+  routers:
+    # === MAIN AI SERVICES ===
+    open-webui:
+      rule: "Host(`accept.open-webui.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: open-webui-svc
+      middlewares: [ secHeaders, gzip ]
+      tls: { certResolver: myresolver }
+
+    flowise:
+      rule: "Host(`accept.flowise.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: flowise-svc
+      middlewares: [ secHeaders, gzip ]
+      tls: { certResolver: myresolver }
+
+    n8n:
+      rule: "Host(`accept.n8n.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: n8n-svc
+      middlewares: [ secHeaders, gzip ]
+      tls: { certResolver: myresolver }
+
+    ollama:
+      rule: "Host(`accept.ollama.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: ollama-svc
+      middlewares: [ secHeaders, gzip ]
+      tls: { certResolver: myresolver }
+
+    searxng:
+      rule: "Host(`accept.searxng.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: searxng-svc
+      middlewares: [ secHeaders, gzip ]
+      tls: { certResolver: myresolver }
+
+    langfuse:
+      rule: "Host(`accept.langfuse.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: langfuse-svc
+      middlewares: [ secHeaders, gzip ]
+      tls: { certResolver: myresolver }
+
+    # === DATABASE ADMIN UIs (LAN-only for security) ===
+    neo4j-http:
+      rule: "Host(`accept.neo4j.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: neo4j-http-svc
+      middlewares: [ secHeaders, gzip, allowLAN ]
+      tls: { certResolver: myresolver }
+
+    clickhouse-http:
+      rule: "Host(`accept.clickhouse.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: clickhouse-http-svc
+      middlewares: [ secHeaders, gzip, allowLAN ]
+      tls: { certResolver: myresolver }
+
+    qdrant:
+      rule: "Host(`accept.qdrant.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: qdrant-svc
+      middlewares: [ secHeaders, gzip, allowLAN ]
+      tls: { certResolver: myresolver }
+
+    # === SUPABASE SERVICES (REAL PORTS FROM RESEARCH) ===
+    
+    # Main Supabase API Gateway (Kong) - Primary entry point
+    supabase-kong:
+      rule: "Host(`accept.kong.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: kong-svc
+      middlewares: [ secHeaders, gzip ]
+      tls: { certResolver: myresolver }
+
+    # Supabase Studio Dashboard (port 3000 - different from your Langfuse!)
+    supabase-studio:
+      rule: "Host(`accept.studio.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: studio-svc
+      middlewares: [ secHeaders, gzip ]
+      tls: { certResolver: myresolver }
+
+    # Supabase Storage API
+    supabase-storage:
+      rule: "Host(`accept.storage.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: storage-svc
+      middlewares: [ secHeaders, gzip ]
+      tls: { certResolver: myresolver }
+
+    # Supabase Analytics/Realtime (shared port 4000)
+    supabase-analytics:
+      rule: "Host(`accept.analytics.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: analytics-svc
+      middlewares: [ secHeaders, gzip, allowLAN ]
+      tls: { certResolver: myresolver }
+
+    # Supabase postgres-meta (port 8080 - CONFLICTS with your OpenWebUI if not remapped)
+    supabase-meta:
+      rule: "Host(`accept.meta.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: meta-svc
+      middlewares: [ secHeaders, gzip, allowLAN ]
+      tls: { certResolver: myresolver }
+
+    # ImgProxy for Supabase Storage
+    supabase-imgproxy:
+      rule: "Host(`accept.imgproxy.valuechainhackers.xyz`)"
+      entryPoints: [ websecure ]
+      service: imgproxy-svc
+      middlewares: [ secHeaders, gzip ]
+      tls: { certResolver: myresolver }
+
+  services:
+    # === AI SERVICES ===
+    open-webui-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:8090"    # Updated to match docker-compose (moved from 8080)
+
+    flowise-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:3001"
+
+    n8n-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:5678"
+
+    ollama-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:11434"
+
+    searxng-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:8081"
+
+    langfuse-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:13000"  # Remapped to avoid Supabase Studio conflict
+
+    # === DATABASE SERVICES ===
+    neo4j-http-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:7474"
+
+    clickhouse-http-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:18123"  # Remapped to avoid conflicts
+
+    qdrant-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:6333"
+
+    # === SUPABASE SERVICES (ACTUAL RESEARCHED PORTS) ===
+    
+    kong-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:8000"    # Kong API Gateway
+
+    studio-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:3000"    # Supabase Studio Dashboard
+
+    storage-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:5000"    # Storage API
+
+    analytics-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:4000"    # Analytics/Realtime
+
+    meta-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:8080"    # Supabase Meta - NO conflict (OpenWebUI moved to 8090)
+
+    imgproxy-svc:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.7.21:5001"    # ImgProxy
+
+tcp:
+  routers:
+    neo4j-bolt:
+      entryPoints: [ bolt ]
+      rule: "HostSNI(`*`)"
+      service: neo4j-bolt-svc
+
+    langfuse-redis:
+      entryPoints: [ redis ]
+      rule: "HostSNI(`*`)"
+      service: redis-svc
+
+    langfuse-clickhouse-native:
+      entryPoints: [ chnative ]
+      rule: "HostSNI(`*`)"
+      service: clickhouse-native-svc
+
+  services:
+    neo4j-bolt-svc:
+      loadBalancer:
+        servers:
+          - address: "10.0.7.21:7687"
+
+    redis-svc:
+      loadBalancer:
+        servers:
+          - address: "10.0.7.21:16379"     # Remapped Langfuse Redis
+
+    clickhouse-native-svc:
+      loadBalancer:
+        servers:
+          - address: "10.0.7.21:18000"     # Remapped Langfuse ClickHouse
+
+# ============================================================================
+# PORT MAPPING SUMMARY (Updated to match docker-compose):
+# ============================================================================
+#
+# YOUR AI SERVICES:
+# - OpenWebUI: 8090 (MOVED from 8080 to avoid Supabase Meta conflict)
+# - Flowise: 3001 ✅
+# - n8n: 5678 ✅  
+# - Langfuse: 13000 (MOVED from 3000 to avoid Supabase Studio conflict)
+# - Ollama: 11434 ✅
+# - SearXNG: 8081 ✅
+#
+# SUPABASE SERVICES (From included compose - using default ports):
+# - Kong Gateway: 8000 → kong.valuechainhackers.xyz
+# - Studio: 3000 → studio.valuechainhackers.xyz
+# - Storage: 5000 → storage.valuechainhackers.xyz
+# - Analytics: 4000 → analytics.valuechainhackers.xyz
+# - Meta: 8080 → meta.valuechainhackers.xyz (was conflicting with OpenWebUI)
+# - ImgProxy: 5001 → imgproxy.valuechainhackers.xyz
+#
+# ALL CONFLICTS RESOLVED! ✅
+#
+# ============================================================================
