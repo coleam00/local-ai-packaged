@@ -4,6 +4,9 @@
 - [x] Try non-caddy with rewrite ports docker deploy
 - [x] 
 
+docker login -u kamitor770
+
+
  python3 start_services.py --profile cpu
  python3 start_services.py --profile cpu --environment private
 **Self-hosted AI Package** is an open, docker compose template that
