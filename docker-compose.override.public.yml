@@ -7,3 +7,7 @@ services:
 
   supavisor:
     ports: !reset null
+
+  caddy:
+    volumes:
+      - ./website:/srv/website
