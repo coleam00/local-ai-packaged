@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiddo Storybooks - Starring Your Little Hero</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@400;600;700;800&family=Lato:wght@300;400;700&family=Pacifico&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-yellow: #FFC107;
+            --primary-blue: #42A5F5;
+            --primary-green: #66BB6A;
+            --deep-blue: #1e3a8a;
+            --warm-red: #ff6b6b;
+            --soft-white: #fefefe;
+            --text-dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            overflow-x: hidden;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #003366 100%);
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Hillside Background Layer */
+        .hillside-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('./Images/Hillside.png') bottom center/cover no-repeat;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Animated Stars Background */
+        .stars-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .star {
+            position: absolute;
+            color: #ffffff;
+            animation: twinkle 2s infinite alternate;
+        }
+
+        @keyframes twinkle {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Main Container */
+        .landing-container {
+            position: relative;
+            z-index: 20;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+
+        /* Logo Section */
+        .logo-section {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .logo-text {
+            font-family: 'Baloo Bhaijaan 2', cursive;
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--primary-yellow);
+            text-shadow: 3px 3px 0px var(--deep-blue), 6px 6px 10px rgba(0,0,0,0.3);
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            font-family: 'Pacifico', cursive;
+            font-size: 1.5rem;
+            color: var(--soft-white);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Main Illustration Area */
+        .illustration-area {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            margin-bottom: 3rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+
+
+        /* Kibi Reading Character */
+        /* CSS Character Placeholder */
+        .kibi-reading {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 400px;
+            z-index: 15;
+        }
+
+        /* Character Body */
+        .kibi-reading::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 200px;
+            background: linear-gradient(45deg, var(--primary-blue) 0%, #64b5f6 100%);
+            border-radius: 60px 60px 20px 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Character Head */
+        .kibi-reading::after {
+            content: '📚';
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(45deg, #ffb74d 0%, #ffd54f 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Character Arms (reading pose) */
+        .character-arm-left,
+        .character-arm-right {
+            position: absolute;
+            width: 60px;
+            height: 15px;
+            background: linear-gradient(45deg, #ffb74d 0%, #ffd54f 100%);
+            border-radius: 10px;
+            top: 140px;
+        }
+
+        .character-arm-left {
+            left: 20px;
+            transform: rotate(-20deg);
+        }
+
+        .character-arm-right {
+            right: 20px;
+            transform: rotate(20deg);
+        }
+
+        /* Book in hands */
+        .character-book {
+            position: absolute;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 60px;
+            background: linear-gradient(45deg, #fff 0%, #f8f9fa 100%);
+            border: 3px solid var(--primary-green);
+            border-radius: 5px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+
+        .character-book::after {
+            content: '✨';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            text-align: center;
+            max-width: 600px;
+        }
+
+        .cta-title {
+            font-family: 'Baloo Bhaijaan 2', cursive;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--soft-white);
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .cta-subtitle {
+            font-size: 1.2rem;
+            color: var(--soft-white);
+            margin-bottom: 2rem;
+            line-height: 1.5;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            font-family: 'Baloo Bhaijaan 2', cursive;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--deep-blue);
+            background: linear-gradient(45deg, var(--primary-yellow) 0%, #ffd54f 100%);
+            text-decoration: none;
+            border-radius: 50px;
+            box-shadow: 0 8px 20px rgba(255, 193, 7, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(255, 193, 7, 0.6);
+        }
+
+        .cta-button::before {
+            content: '✨';
+            position: absolute;
+            left: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .cta-button::after {
+            content: '✨';
+            position: absolute;
+            right: 1rem;
+            font-size: 1.2rem;
+        }
+
+        /* Sparkles Animation */
+        .sparkle {
+            position: absolute;
+            color: var(--primary-yellow);
+            animation: sparkle 3s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .logo-text {
+                font-size: 2.5rem;
+            }
+            
+            .tagline {
+                font-size: 1.2rem;
+            }
+            
+            .illustration-area {
+                height: 300px;
+            }
+            
+            .cta-title {
+                font-size: 2rem;
+            }
+            
+            .cta-subtitle {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .landing-container {
+                padding: 1rem;
+            }
+            
+            .logo-text {
+                font-size: 2rem;
+            }
+            
+            .illustration-area {
+                height: 250px;
+            }
+            
+            .kibi-reading {
+                width: 1200px;
+                bottom: 5%;
+            }
+            
+            .cta-button {
+                padding: 0.8rem 2rem;
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hillside Background -->
+    <div class="hillside-background"></div>
+
+    <!-- Animated Stars Background -->
+    <div class="stars-container" id="starsContainer"></div>
+
+    <!-- Main Landing Container -->
+    <div class="landing-container">
+        <!-- Logo Section -->
+        <div class="logo-section">
+            <h1 class="logo-text">Kiddo Storybooks</h1>
+            <p class="tagline">Starring Your Little Hero</p>
+        </div>
+
+        <!-- Main Illustration -->
+        <div class="illustration-area">
+            <!-- CSS Character Placeholder -->
+            <div class="kibi-reading">
+                <div class="character-arm-left"></div>
+                <div class="character-arm-right"></div>
+                <div class="character-book"></div>
+            </div>
+        </div>
+
+        <!-- Call to Action Section -->
+        <div class="cta-section">
+            <h2 class="cta-title">Create Magical Adventures</h2>
+            <p class="cta-subtitle">
+                Transform your child into the hero of their own personalized storybook. 
+                Watch their eyes light up as they see themselves in enchanting 3D adventures!
+            </p>
+            <a href="#customize" class="cta-button">Start Their Story</a>
+        </div>
+    </div>
+
+    <script>
+        // Create animated stars
+        function createStars() {
+            const starsContainer = document.getElementById('starsContainer');
+            const starCount = 50;
+
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.innerHTML = Math.random() > 0.5 ? '✨' : '⭐';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.fontSize = (Math.random() * 0.5 + 0.5) + 'rem';
+                star.style.animationDelay = Math.random() * 2 + 's';
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // Create floating sparkles on click
+        function createSparkle(e) {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'sparkle';
+            sparkle.innerHTML = '✨';
+            sparkle.style.left = e.clientX - 10 + 'px';
+            sparkle.style.top = e.clientY - 10 + 'px';
+            sparkle.style.fontSize = (Math.random() * 1 + 0.5) + 'rem';
+            
+            document.body.appendChild(sparkle);
+            
+            setTimeout(() => {
+                sparkle.remove();
+            }, 3000);
+        }
+
+        // Add click event for sparkles
+        document.addEventListener('click', createSparkle);
+
+        // Initialize stars when page loads
+        document.addEventListener('DOMContentLoaded', createStars);
+
+        // Smooth scroll for CTA button (when customize section is added)
+        document.querySelector('.cta-button').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Add a subtle bounce effect to the button
+            this.style.transform = 'translateY(-6px) scale(1.05)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 200);
+            
+            // Redirect directly to dashboard
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 300);
+        });
+
+        // Add floating animation to various elements
+        function addFloatingAnimation() {
+            // No floating elements currently - function kept for future use
+        }
+
+        // Initialize floating animations
+        document.addEventListener('DOMContentLoaded', addFloatingAnimation);
+    </script>
+</body>
+</html>
