@@ -6,3 +6,8 @@ shared-backup/
 .env.test
 searxng/settings.yml
 searxng/uwsgi*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
