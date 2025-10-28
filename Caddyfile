@@ -7,37 +7,37 @@
 {$N8N_HOSTNAME} {
     # For domains, Caddy will automatically use Let's Encrypt
     # For localhost/port addresses, HTTPS won't be enabled
-    reverse_proxy n8n:5678
+    reverse_proxy n8n:${N8N_INTERNAL_PORT:-5678}
 }
 
 # Open WebUI
 {$WEBUI_HOSTNAME} {
-    reverse_proxy open-webui:8080
+    reverse_proxy open-webui:${OPEN_WEBUI_INTERNAL_PORT:-8080}
 }
 
 # Flowise
 {$FLOWISE_HOSTNAME} {
-    reverse_proxy flowise:3001
+    reverse_proxy flowise:${FLOWISE_INTERNAL_PORT:-3001}
 }
 
 # Langfuse
 {$LANGFUSE_HOSTNAME} {
-    reverse_proxy langfuse-web:3000
+    reverse_proxy langfuse-web:${LANGFUSE_WEB_INTERNAL_PORT:-3000}
 }
 
 # # Ollama API
 # {$OLLAMA_HOSTNAME} {
-#     reverse_proxy ollama:11434
+#     reverse_proxy ollama:${OLLAMA_INTERNAL_PORT:-11434}
 # }
 
 # Supabase
 {$SUPABASE_HOSTNAME} {
-    reverse_proxy kong:8000
+    reverse_proxy kong:${KONG_INTERNAL_PORT:-8000}
 }
 
 # Neo4j
 {$NEO4J_HOSTNAME} {
-    reverse_proxy neo4j:7474
+    reverse_proxy neo4j:${NEO4J_INTERNAL_PORT:-7474}
 }
 
 import /etc/caddy/addons/*.conf
@@ -93,7 +93,7 @@ import /etc/caddy/addons/*.conf
 #     }
     
 #     # SearXNG (uWSGI)
-#     reverse_proxy searxng:8080 {
+#     reverse_proxy searxng:${SEARXNG_INTERNAL_PORT:-8080} {
 #         header_up X-Forwarded-Port {http.request.port}
 #         header_up X-Real-IP {http.request.remote.host}
 #         # https://github.com/searx/searx-docker/issues/24

@@ -2,9 +2,16 @@
 """
 start_services.py
 
-This script starts the Supabase stack first, waits for it to initialize, and then starts
-the local AI stack. Both stacks use the same Docker Compose project name ("localai")
-so they appear together in Docker Desktop.
+This script can operate in two modes:
+
+1. Default mode: Clones Supabase repository, sets up configuration, and manages both 
+   Supabase and local AI services together.
+
+2. External Supabase mode (--ext-supabase): Uses an existing Supabase installation
+   at the specified path. Will not modify the existing Supabase configuration.
+
+Both modes use the same Docker Compose project name ("localai") so all services 
+appear together in Docker Desktop.
 """
 
 import os
@@ -15,10 +22,67 @@ import argparse
 import platform
 import sys
 
-def run_command(cmd, cwd=None):
+def run_command(cmd, cwd=None, suppress_orphan_warning=False, quiet=False):
     """Run a shell command and print it."""
     print("Running:", " ".join(cmd))
-    subprocess.run(cmd, cwd=cwd, check=True)
+    
+    if quiet or suppress_orphan_warning:
+        # Capture all output
+        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+        
+        if quiet:
+            # Only show summary lines for docker compose up/down
+            if 'up' in cmd or 'down' in cmd:
+                stdout_lines = result.stdout.split('\n')
+                for line in stdout_lines:
+                    # Show network and summary lines, skip verbose container status
+                    if (line.strip() and 
+                        ('Network' in line or 'Running' in line or 'Container' in line) and
+                        ('Creating' not in line and 'Created' not in line and 'Starting' not in line and 
+                         'Started' not in line and 'Waiting' not in line and 'Healthy' not in line)):
+                        print(line)
+            else:
+                # For non-docker-compose commands, show all output
+                if result.stdout:
+                    print(result.stdout, end='')
+        else:
+            # Show stdout normally
+            if result.stdout:
+                print(result.stdout, end='')
+        
+        # Handle stderr (with orphan warning filtering if requested)
+        if result.stderr:
+            stderr_lines = result.stderr.split('\n')
+            for line in stderr_lines:
+                if suppress_orphan_warning and 'Found orphan containers' in line:
+                    continue
+                if line.strip():
+                    print(line, file=sys.stderr)
+        
+        # Check return code
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(result.returncode, cmd)
+    else:
+        subprocess.run(cmd, cwd=cwd, check=True)
+
+def check_external_supabase(supabase_path):
+    """Check if external Supabase installation exists and is properly configured."""
+    if not os.path.exists(supabase_path):
+        print(f"Error: External Supabase installation not found at {supabase_path}")
+        sys.exit(1)
+    
+    docker_compose_path = os.path.join(supabase_path, "docker-compose.yml")
+    if not os.path.exists(docker_compose_path):
+        print(f"Error: Supabase docker-compose.yml not found at {docker_compose_path}")
+        sys.exit(1)
+    
+    env_path = os.path.join(supabase_path, ".env")
+    if not os.path.exists(env_path):
+        print(f"Error: Supabase .env file not found at {env_path}")
+        sys.exit(1)
+    
+    print(f"Found external Supabase installation at {supabase_path}")
+    return supabase_path
 
 def clone_supabase_repo():
     """Clone the Supabase repository using sparse checkout if not already present."""
@@ -46,24 +110,49 @@ def prepare_supabase_env():
     print("Copying .env in root to .env in supabase/docker...")
     shutil.copyfile(env_example_path, env_path)
 
+
 def stop_existing_containers(profile=None):
-    print("Stopping and removing existing containers for the unified project 'localai'...")
+    print("Stopping and removing existing local AI containers...")
     cmd = ["docker", "compose", "-p", "localai"]
     if profile and profile != "none":
         cmd.extend(["--profile", profile])
     cmd.extend(["-f", "docker-compose.yml", "down"])
     run_command(cmd)
 
-def start_supabase(environment=None):
-    """Start the Supabase services (using its compose file)."""
-    print("Starting Supabase services...")
+def stop_internal_supabase_containers():
+    """Stop containers for internal Supabase (cloned repo)."""
+    print("Stopping and removing existing internal Supabase containers...")
+    cmd = ["docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml", "down"]
+    run_command(cmd)
+
+def stop_external_supabase_containers(supabase_path):
+    """Stop containers for external Supabase installation."""
+    print("Stopping and removing existing external Supabase containers...")
+    cmd = ["docker", "compose", "-p", "localai", "-f", "docker-compose.yml", "down"]
+    run_command(cmd, cwd=supabase_path)
+
+def start_internal_supabase(environment=None):
+    """Start the Supabase services (using cloned repository)."""
+    print("Starting internal Supabase services...")
     cmd = ["docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml"]
     if environment and environment == "public":
         cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])
     cmd.extend(["up", "-d"])
     run_command(cmd)
 
-def start_local_ai(profile=None, environment=None):
+def start_external_supabase(supabase_path, environment=None):
+    """Start the Supabase services (using external compose file)."""
+    print("Starting external Supabase services...")
+    cmd = ["docker", "compose", "-p", "localai", "-f", "docker-compose.yml"]
+    if environment and environment == "public":
+        # Look for override file in the current local-ai directory
+        override_path = os.path.join(os.getcwd(), "docker-compose.override.public.supabase.yml")
+        if os.path.exists(override_path):
+            cmd.extend(["-f", override_path])
+    cmd.extend(["up", "-d"])
+    run_command(cmd, cwd=supabase_path)
+
+def start_local_ai(profile=None, environment=None, suppress_orphan_warning=False, quiet=False):
     """Start the local AI services (using its compose file)."""
     print("Starting local AI services...")
     cmd = ["docker", "compose", "-p", "localai"]
@@ -75,7 +164,7 @@ def start_local_ai(profile=None, environment=None):
     if environment and environment == "public":
         cmd.extend(["-f", "docker-compose.override.public.yml"])
     cmd.extend(["up", "-d"])
-    run_command(cmd)
+    run_command(cmd, suppress_orphan_warning=suppress_orphan_warning, quiet=quiet)
 
 def generate_searxng_secret_key():
     """Generate a secret key for SearXNG based on the current platform."""
@@ -223,26 +312,73 @@ def main():
                       help='Profile to use for Docker Compose (default: cpu)')
     parser.add_argument('--environment', choices=['private', 'public'], default='private',
                       help='Environment to use for Docker Compose (default: private)')
+    parser.add_argument('--ext-supabase', type=str, metavar='PATH',
+                      help='Path to external Supabase installation (enables external mode)')
     args = parser.parse_args()
-
-    clone_supabase_repo()
-    prepare_supabase_env()
 
     # Generate SearXNG secret key and check docker-compose.yml
     generate_searxng_secret_key()
     check_and_fix_docker_compose_for_searxng()
-
+    
+    # Stop existing containers first
     stop_existing_containers(args.profile)
-
-    # Start Supabase first
-    start_supabase(args.environment)
-
-    # Give Supabase some time to initialize
-    print("Waiting for Supabase to initialize...")
-    time.sleep(10)
-
-    # Then start the local AI services
-    start_local_ai(args.profile, args.environment)
+    
+    if args.ext_supabase:
+        # External Supabase mode
+        supabase_path = os.path.abspath(args.ext_supabase)
+        check_external_supabase(supabase_path)
+        
+        # Stop external Supabase containers
+        stop_external_supabase_containers(supabase_path)
+        
+        # Start external Supabase first
+        start_external_supabase(supabase_path, args.environment)
+        
+        # Give Supabase some time to initialize
+        print("Waiting for Supabase to initialize...")
+        time.sleep(10)
+        
+        # Start local AI services (suppress orphan warning and use quiet mode for external mode)
+        start_local_ai(args.profile, args.environment, suppress_orphan_warning=True, quiet=True)
+        
+    else:
+        # Internal Supabase mode (original behavior)
+        
+        # Safety check: warn if external Supabase containers are running
+        try:
+            result = subprocess.run(
+                ["docker", "ps", "--filter", "name=supabase-", "--format", "{{.Names}}"],
+                capture_output=True, text=True, check=True
+            )
+            running_supabase = [name for name in result.stdout.strip().split('\n') if name.strip()]
+            if running_supabase:
+                print("\n⚠️  WARNING: Detected running Supabase containers from external installation:")
+                for container in running_supabase:
+                    print(f"   - {container}")
+                print("\nIf you intended to use external Supabase, add --ext-supabase PATH")
+                print("Continue with internal Supabase setup? (y/N): ", end="")
+                response = input().strip().lower()
+                if response not in ['y', 'yes']:
+                    print("Aborting. Use --ext-supabase PATH for external Supabase mode.")
+                    sys.exit(1)
+        except Exception:
+            pass  # Ignore errors in safety check
+        
+        clone_supabase_repo()
+        prepare_supabase_env()
+        
+        # Stop internal Supabase containers
+        stop_internal_supabase_containers()
+        
+        # Start internal Supabase first
+        start_internal_supabase(args.environment)
+        
+        # Give Supabase some time to initialize
+        print("Waiting for Supabase to initialize...")
+        time.sleep(10)
+        
+        # Start local AI services (no need to suppress orphan warning for internal mode)
+        start_local_ai(args.profile, args.environment)
 
 if __name__ == "__main__":
     main()
