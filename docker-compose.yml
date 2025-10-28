@@ -62,8 +62,13 @@ services:
       - 3001/tcp
     environment:
         - PORT=3001
-        - FLOWISE_USERNAME=${FLOWISE_USERNAME}
-        - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
+        - JWT_AUTH_TOKEN_SECRET=${JWT_AUTH_TOKEN_SECRET}
+        - JWT_REFRESH_TOKEN_SECRET=${JWT_REFRESH_TOKEN_SECRET}
+        - JWT_TOKEN_EXPIRY_IN_MINUTES=60
+        - JWT_REFRESH_TOKEN_EXPIRY_IN_MINUTES=129600
+        - JWT_AUDIENCE=flowise
+        - JWT_ISSUER=flowise
+        - EXPRESS_SESSION_SECRET=${EXPRESS_SESSION_SECRET}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
