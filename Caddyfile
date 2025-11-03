@@ -10,16 +10,6 @@
     reverse_proxy n8n:5678
 }
 
-# Open WebUI
-{$WEBUI_HOSTNAME} {
-    reverse_proxy open-webui:8080
-}
-
-# Flowise
-{$FLOWISE_HOSTNAME} {
-    reverse_proxy flowise:3001
-}
-
 # Langfuse
 {$LANGFUSE_HOSTNAME} {
     reverse_proxy langfuse-web:3000

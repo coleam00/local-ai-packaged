@@ -5,8 +5,6 @@ volumes:
   n8n_storage:
   ollama_storage:
   qdrant_storage:
-  open-webui:
-  flowise:
   caddy-data:
   caddy-config:
   valkey-data:
@@ -54,33 +52,6 @@ x-init-ollama: &init-ollama
     - "sleep 3; OLLAMA_HOST=ollama:11434 ollama pull qwen2.5:7b-instruct-q4_K_M; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
 
 services:
-  flowise:
-    image: flowiseai/flowise
-    restart: unless-stopped
-    container_name: flowise
-    expose:
-      - 3001/tcp
-    environment:
-        - PORT=3001
-        - FLOWISE_USERNAME=${FLOWISE_USERNAME}
-        - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-        - ~/.flowise:/root/.flowise
-    entrypoint: /bin/sh -c "sleep 3; flowise start"
-
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    restart: unless-stopped
-    container_name: open-webui
-    expose:
-      - 8080/tcp
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - open-webui:/app/backend/data
-
   n8n-import:
     <<: *service-n8n
     container_name: n8n-import
@@ -149,13 +120,11 @@ services:
       - caddy-config:/config:rw
     environment:
       - N8N_HOSTNAME=${N8N_HOSTNAME:-":8001"}
-      - WEBUI_HOSTNAME=${WEBUI_HOSTNAME:-":8002"}
-      - FLOWISE_HOSTNAME=${FLOWISE_HOSTNAME:-":8003"}
-      - OLLAMA_HOSTNAME=${OLLAMA_HOSTNAME:-":8004"}
-      - SUPABASE_HOSTNAME=${SUPABASE_HOSTNAME:-":8005"}
-      - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME:-":8006"}
-      - LANGFUSE_HOSTNAME=${LANGFUSE_HOSTNAME:-":8007"}
-      - NEO4J_HOSTNAME=${NEO4J_HOSTNAME:-":8008"}
+      - OLLAMA_HOSTNAME=${OLLAMA_HOSTNAME:-":8002"}
+      - SUPABASE_HOSTNAME=${SUPABASE_HOSTNAME:-":8003"}
+      - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME:-":8004"}
+      - LANGFUSE_HOSTNAME=${LANGFUSE_HOSTNAME:-":8005"}
+      - NEO4J_HOSTNAME=${NEO4J_HOSTNAME:-":8006"}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-internal}
     cap_drop:
       - ALL

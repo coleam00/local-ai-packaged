@@ -1,12 +1,4 @@
 services:
-  flowise:
-    ports:
-      - 127.0.0.1:3001:3001
-
-  open-webui:
-    ports:
-      - 127.0.0.1:8080:8080
-
   n8n:
     ports:
       - 127.0.0.1:5678:5678
