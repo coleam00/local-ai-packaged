@@ -320,6 +320,30 @@ Replace `<your-profile>` with one of: `cpu`, `gpu-nvidia`, `gpu-amd`, or `none`.
 
 Note: The `start_services.py` script itself does not update containers - it only restarts them or pulls them if you are downloading these containers for the first time. To get the latest versions, you must explicitly run the commands above.
 
+## Log Rotation Configuration
+
+All services in the stack have automatic log rotation configured to prevent unbounded disk usage:
+
+- **High-volume services** (n8n, postgres, clickhouse, langfuse-worker): 50MB per file, 3 files retained (200MB total per service)
+- **Medium-volume services** (ollama, open-webui, flowise, qdrant, neo4j, langfuse-web, minio): 10MB per file, 3 files retained (40MB total per service)
+- **Low-volume services** (caddy, redis, searxng, n8n-import, ollama-pull init containers): 1MB per file, 1 file retained (2MB total per service)
+
+Maximum total log disk usage across all services: ~1.5GB
+
+To customize log rotation for a specific service, modify the `logging` section in `docker-compose.yml`:
+
+```yaml
+services:
+  service-name:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"  # Customize size
+        max-file: "5"    # Customize file count
+```
+
+For more information, see the [Docker logging documentation](https://docs.docker.com/engine/logging/drivers/json-file/).
+
 ## Troubleshooting
 
 Here are solutions to common issues you might encounter:

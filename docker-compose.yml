@@ -42,6 +42,11 @@ x-ollama: &service-ollama
     - OLLAMA_MAX_LOADED_MODELS=2
   volumes:
     - ollama_storage:/root/.ollama
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
 
 x-init-ollama: &init-ollama
   image: ollama/ollama:latest
@@ -52,6 +57,11 @@ x-init-ollama: &init-ollama
   command:
     - "-c"
     - "sleep 3; OLLAMA_HOST=ollama:11434 ollama pull qwen2.5:7b-instruct-q4_K_M; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "1m"
+      max-file: "1"
 
 services:
   flowise:
@@ -69,6 +79,11 @@ services:
     volumes:
         - ~/.flowise:/root/.flowise
     entrypoint: /bin/sh -c "sleep 3; flowise start"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
@@ -80,6 +95,11 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - open-webui:/app/backend/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   n8n-import:
     <<: *service-n8n
@@ -90,6 +110,11 @@ services:
       - "n8n import:credentials --separate --input=/backup/credentials && n8n import:workflow --separate --input=/backup/workflows"
     volumes:
       - ./n8n/backup:/backup
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
 
   n8n:
     <<: *service-n8n
@@ -104,6 +129,11 @@ services:
     depends_on:
       n8n-import:
         condition: service_completed_successfully
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   qdrant:
     image: qdrant/qdrant
@@ -114,6 +144,11 @@ services:
       - 6334/tcp
     volumes:
       - qdrant_storage:/qdrant/storage
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   neo4j:
     image: neo4j:latest
@@ -129,6 +164,11 @@ services:
     environment:
         - NEO4J_AUTH=${NEO4J_AUTH:-"neo4j/your_password"}
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   caddy:
     container_name: caddy
@@ -224,6 +264,11 @@ services:
       REDIS_TLS_CA: ${REDIS_TLS_CA:-/certs/ca.crt}
       REDIS_TLS_CERT: ${REDIS_TLS_CERT:-/certs/redis.crt}
       REDIS_TLS_KEY: ${REDIS_TLS_KEY:-/certs/redis.key}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   langfuse-web:
     image: langfuse/langfuse:3
@@ -244,6 +289,11 @@ services:
       LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
       LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-}
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   clickhouse:
     image: clickhouse/clickhouse-server
@@ -266,6 +316,11 @@ services:
       timeout: 5s
       retries: 10
       start_period: 1s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   minio:
     image: minio/minio
@@ -287,6 +342,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 1s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   postgres:
     image: postgres:${POSTGRES_VERSION:-17}
@@ -304,6 +364,11 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   redis:
     container_name: redis
