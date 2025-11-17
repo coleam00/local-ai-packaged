@@ -65,7 +65,11 @@ services:
     environment:
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-    command: ["litellm", "--port", "4000", "--num_workers", "2"]
+      - GITHUB_API_KEY=${GITHUB_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    volumes:
+      - ./context/LiteLLM:/config:ro
+    command: ["litellm", "--config", "/config/litellm.config.template.yaml", "--port", "4000", "--num_workers", "2"]
 
   flowise:
     image: flowiseai/flowise
