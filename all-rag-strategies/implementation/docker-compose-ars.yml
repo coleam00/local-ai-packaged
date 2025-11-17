@@ -26,6 +26,7 @@ services:
       context: .
       dockerfile: Dockerfile.rag
     container_name: rag_voice_agent
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,7 +42,6 @@ services:
       - ./documents:/app/documents
       - ./.env:/app/.env
     command: ["uv", "run", "python", "rag_agent.py", "dev"]
-    restart: unless-stopped
 
   # Optional: Document ingestion service
   ingestion:

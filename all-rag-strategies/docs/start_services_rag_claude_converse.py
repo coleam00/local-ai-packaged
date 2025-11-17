@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-start_services.py - Enhanced Version with RAG Schema Initialization
+start_services.py
 
-This script starts the Supabase stack first, initializes the RAG schema,
-waits for it to be ready, and then starts the local AI stack.
+This script starts the Supabase stack first, waits for it to initialize, applies the RAG schema,
+and then starts the local AI stack. Both stacks use the same Docker Compose project name ("localai")
+so they appear together in Docker Desktop.
 """
 
 import os
@@ -13,6 +14,8 @@ import time
 import argparse
 import platform
 import sys
+import asyncio
+import asyncpg
 
 def run_command(cmd, cwd=None):
     """Run a shell command and print it."""
@@ -46,166 +49,174 @@ def prepare_supabase_env():
     shutil.copyfile(env_example_path, env_path)
 
 def prepare_rag_schema():
-    """
-    Prepare RAG database schema for initialization.
+    """Copy RAG schema.sql to Supabase init directory for automatic execution."""
+    print("Preparing RAG database schema...")
     
-    This function copies the RAG schema SQL file to the Supabase initialization
-    directory so it will be executed when the database starts.
-    """
-    print("\n" + "=" * 80)
-    print("Preparing RAG Database Schema")
-    print("=" * 80)
-    
-    # Define paths
+    # Paths
     schema_source = os.path.join("all-rag-strategies", "implementation", "sql", "schema.sql")
-    init_dir = os.path.join("supabase", "docker", "volumes", "db", "init")
-    schema_dest = os.path.join(init_dir, "02-rag-schema.sql")
+    supabase_init_dir = os.path.join("supabase", "docker", "volumes", "db", "init")
+    schema_dest = os.path.join(supabase_init_dir, "02-rag-schema.sql")
     
-    # Check if schema source exists
+    # Check if source schema exists
     if not os.path.exists(schema_source):
         print(f"WARNING: RAG schema file not found at {schema_source}")
-        print("RAG functionality will not be available until schema is initialized.")
+        print("RAG functionality will not be available until schema is applied manually.")
         return False
     
     # Create init directory if it doesn't exist
-    os.makedirs(init_dir, exist_ok=True)
+    os.makedirs(supabase_init_dir, exist_ok=True)
     
     # Copy schema file
-    print(f"Copying RAG schema from {schema_source}")
-    print(f"                    to {schema_dest}")
-    shutil.copyfile(schema_source, schema_dest)
-    print("RAG schema prepared successfully!")
-    print("=" * 80 + "\n")
-    
-    return True
+    try:
+        shutil.copyfile(schema_source, schema_dest)
+        print(f"✓ RAG schema copied to {schema_dest}")
+        print("  Schema will be applied when Supabase database initializes")
+        return True
+    except Exception as e:
+        print(f"ERROR: Failed to copy RAG schema: {e}")
+        return False
 
-def wait_for_database():
+async def wait_for_database(max_retries=30, retry_delay=2):
     """
-    Wait for the Supabase database to be fully ready.
+    Wait for Supabase database to be ready and accepting connections.
     
-    This function checks if the database is accepting connections by attempting
-    to connect via pg_isready through Docker. It dynamically finds the container ID.
+    Args:
+        max_retries: Maximum number of connection attempts
+        retry_delay: Seconds to wait between attempts
+    
+    Returns:
+        bool: True if database is ready, False otherwise
     """
-    print("\n" + "=" * 80)
-    print("Waiting for Supabase Database to be Ready")
-    print("=" * 80)
+    from dotenv import load_dotenv
+    load_dotenv(".env")
     
-    max_attempts = 30
-    attempt = 0
-    db_service_name = "db" # The service name in Supabase's docker-compose.yml
-    project_name = "localai"
-    compose_file = os.path.join("supabase", "docker", "docker-compose.yml")
-
-    # Command to get the container ID
-    get_container_id_cmd = [
-        "docker", "compose",
-        "-p", project_name,
-        "-f", compose_file,
-        "ps", "-q", db_service_name
-    ]
-
-    while attempt < max_attempts:
-        try:
-            # Get the container ID dynamically
-            container_id_result = subprocess.run(get_container_id_cmd, capture_output=True, text=True, check=True)
-            container_id = container_id_result.stdout.strip()
-
-            if not container_id:
-                print(f"Attempt {attempt + 1}/{max_attempts}: Supabase container '{db_service_name}' not found yet. Retrying...")
-                time.sleep(2)
-                attempt += 1
-                continue
-
-            # Check if the database is ready inside the container
-            result = subprocess.run(
-                ["docker", "exec", container_id, "pg_isready", "-U", "postgres"],
-                capture_output=True,
-                text=True,
-                check=False
-            )
-            
-            if result.returncode == 0:
-                print("✓ Database is ready!")
-                print("=" * 80 + "\n")
-                return True
-            
-            print(f"Attempt {attempt + 1}/{max_attempts}: Database not ready yet...")
-            time.sleep(2)
-            attempt += 1
-            
-        except subprocess.CalledProcessError as e:
-            print(f"Error getting container ID: {e.stderr}. Retrying...")
-            time.sleep(2)
-            attempt += 1
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}. Retrying...")
-            time.sleep(2)
-            attempt += 1
+    # Get database credentials from environment
+    postgres_password = os.getenv("POSTGRES_PASSWORD")
+    postgres_host = "localhost"  # We're connecting from host, not within Docker network
+    postgres_port = "5432"
+    postgres_db = "postgres"
+    postgres_user = "postgres"
     
-    print("WARNING: Database did not become ready within expected time.")
-    print("=" * 80 + "\n")
-    return False
-
-def initialize_rag_schema_runtime():
-    """
-    Initialize RAG schema at runtime if it wasn't initialized during db startup.
-    
-    This is a fallback method that applies the schema directly to a running database.
-    """
-    print("\n" + "=" * 80)
-    print("Initializing RAG Schema (Runtime Method)")
-    print("=" * 80)
-    
-    schema_source = os.path.join("all-rag-strategies", "implementation", "sql", "schema.sql")
-    
-    if not os.path.exists(schema_source):
-        print(f"ERROR: RAG schema file not found at {schema_source}")
+    if not postgres_password:
+        print("ERROR: POSTGRES_PASSWORD not found in .env file")
         return False
     
+    database_url = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
+    
+    print(f"Waiting for Supabase database to be ready...")
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            # Attempt to connect
+            conn = await asyncpg.connect(database_url, timeout=5)
+            
+            # Test connection with a simple query
+            result = await conn.fetchval("SELECT 1")
+            await conn.close()
+            
+            if result == 1:
+                print(f"✓ Database is ready (attempt {attempt}/{max_retries})")
+                return True
+                
+        except (asyncpg.PostgresError, OSError, ConnectionRefusedError) as e:
+            if attempt < max_retries:
+                print(f"  Database not ready yet (attempt {attempt}/{max_retries}), retrying in {retry_delay}s...")
+                await asyncio.sleep(retry_delay)
+            else:
+                print(f"ERROR: Database failed to become ready after {max_retries} attempts")
+                print(f"Last error: {e}")
+                return False
+    
+    return False
+
+async def verify_rag_schema():
+    """
+    Verify that RAG schema was applied successfully.
+    
+    Returns:
+        bool: True if schema is present, False otherwise
+    """
+    from dotenv import load_dotenv
+    load_dotenv(".env")
+    
+    postgres_password = os.getenv("POSTGRES_PASSWORD")
+    database_url = f"postgresql://postgres:{postgres_password}@localhost:5432/postgres"
+    
     try:
-        # Get the container ID dynamically
-        db_service_name = "db"
-        project_name = "localai"
-        compose_file = os.path.join("supabase", "docker", "docker-compose.yml")
-        get_container_id_cmd = [
-            "docker", "compose", "-p", project_name, "-f", compose_file, "ps", "-q", db_service_name
-        ]
-        container_id_result = subprocess.run(get_container_id_cmd, capture_output=True, text=True, check=True)
-        container_id = container_id_result.stdout.strip()
-
-        if not container_id:
-            print("ERROR: Could not find the Supabase database container to apply schema.")
-            return False
-
-        # Read schema file
-        with open(schema_source, 'r') as f:
-            schema_sql = f.read()
+        conn = await asyncpg.connect(database_url, timeout=10)
         
-        # Apply schema via docker exec and psql
-        print(f"Applying RAG schema to database container {container_id[:12]}...")
-        process = subprocess.Popen(
-            [
-                "docker", "exec", "-i", container_id,
-                "psql", "-U", "postgres", "-d", "postgres"
-            ],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+        # Check if documents table exists
+        documents_exists = await conn.fetchval(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'documents')"
         )
         
-        stdout, stderr = process.communicate(input=schema_sql)
+        # Check if chunks table exists
+        chunks_exists = await conn.fetchval(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'chunks')"
+        )
         
-        if process.returncode == 0:
-            print("✓ RAG schema applied successfully!")
-            print("=" * 80 + "\n")
+        # Check if match_chunks function exists
+        function_exists = await conn.fetchval(
+            "SELECT EXISTS (SELECT FROM pg_proc WHERE proname = 'match_chunks')"
+        )
+        
+        # Check if vector extension is enabled
+        vector_exists = await conn.fetchval(
+            "SELECT EXISTS (SELECT FROM pg_extension WHERE extname = 'vector')"
+        )
+        
+        await conn.close()
+        
+        if documents_exists and chunks_exists and function_exists and vector_exists:
+            print("✓ RAG schema verification successful:")
+            print("  ✓ documents table present")
+            print("  ✓ chunks table present")
+            print("  ✓ match_chunks() function present")
+            print("  ✓ pgvector extension enabled")
             return True
         else:
-            print(f"ERROR applying schema: {stderr}")
+            print("⚠ RAG schema verification failed:")
+            if not documents_exists:
+                print("  ✗ documents table missing")
+            if not chunks_exists:
+                print("  ✗ chunks table missing")
+            if not function_exists:
+                print("  ✗ match_chunks() function missing")
+            if not vector_exists:
+                print("  ✗ pgvector extension not enabled")
             return False
             
     except Exception as e:
-        print(f"ERROR: Failed to initialize RAG schema: {e}")
+        print(f"ERROR: Schema verification failed: {e}")
+        return False
+
+async def initialize_rag_database():
+    """
+    Initialize RAG database schema after Supabase is ready.
+    
+    Returns:
+        bool: True if initialization successful
+    """
+    print("\n" + "="*60)
+    print("RAG Database Initialization")
+    print("="*60)
+    
+    # Wait for database to be ready
+    if not await wait_for_database():
+        print("ERROR: Database initialization failed - Supabase database not ready")
+        return False
+    
+    # Give database a moment to stabilize
+    print("Database ready, waiting 3 seconds for stabilization...")
+    await asyncio.sleep(3)
+    
+    # Verify schema was applied (should have been applied via init scripts)
+    if await verify_rag_schema():
+        print("✓ RAG database initialization complete")
+        return True
+    else:
+        print("⚠ RAG schema not found - will need manual application")
+        print("  Run: psql $DATABASE_URL < all-rag-strategies/implementation/sql/schema.sql")
         return False
 
 def stop_existing_containers(profile=None):
@@ -242,16 +253,16 @@ def start_local_ai(profile=None, environment=None):
 def generate_searxng_secret_key():
     """Generate a secret key for SearXNG based on the current platform."""
     print("Checking SearXNG settings...")
-    
+
     # Define paths for SearXNG settings files
     settings_path = os.path.join("searxng", "settings.yml")
     settings_base_path = os.path.join("searxng", "settings-base.yml")
-    
+
     # Check if settings-base.yml exists
     if not os.path.exists(settings_base_path):
         print(f"Warning: SearXNG base settings file not found at {settings_base_path}")
         return
-    
+
     # Check if settings.yml exists, if not create it from settings-base.yml
     if not os.path.exists(settings_path):
         print(f"SearXNG settings.yml not found. Creating from {settings_base_path}...")
@@ -263,12 +274,12 @@ def generate_searxng_secret_key():
             return
     else:
         print(f"SearXNG settings.yml already exists at {settings_path}")
-    
+
     print("Generating SearXNG secret key...")
-    
+
     # Detect the platform and run the appropriate command
     system = platform.system()
-    
+
     try:
         if system == "Windows":
             print("Detected Windows platform, using PowerShell to generate secret key...")
@@ -281,6 +292,7 @@ def generate_searxng_secret_key():
                 "(Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml"
             ]
             subprocess.run(ps_command, check=True)
+
         elif system == "Darwin":  # macOS
             print("Detected macOS platform, using sed command with empty string parameter...")
             # macOS sed command requires an empty string for the -i parameter
@@ -288,6 +300,7 @@ def generate_searxng_secret_key():
             random_key = subprocess.check_output(openssl_cmd).decode('utf-8').strip()
             sed_cmd = ["sed", "-i", "", f"s|ultrasecretkey|{random_key}|g", settings_path]
             subprocess.run(sed_cmd, check=True)
+
         else:  # Linux and other Unix-like systems
             print("Detected Linux/Unix platform, using standard sed command...")
             # Standard sed command for Linux
@@ -295,29 +308,35 @@ def generate_searxng_secret_key():
             random_key = subprocess.check_output(openssl_cmd).decode('utf-8').strip()
             sed_cmd = ["sed", "-i", f"s|ultrasecretkey|{random_key}|g", settings_path]
             subprocess.run(sed_cmd, check=True)
-        
+
         print("SearXNG secret key generated successfully.")
-        
+
     except Exception as e:
         print(f"Error generating SearXNG secret key: {e}")
-        print("You may need to manually generate the secret key.")
+        print("You may need to manually generate the secret key using the commands:")
+        print("  - Linux: sed -i \"s|ultrasecretkey|$(openssl rand -hex 32)|g\" searxng/settings.yml")
+        print("  - macOS: sed -i '' \"s|ultrasecretkey|$(openssl rand -hex 32)|g\" searxng/settings.yml")
+        print("  - Windows (PowerShell):")
+        print("    $randomBytes = New-Object byte[] 32")
+        print("    (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes)")
+        print("    $secretKey = -join ($randomBytes | ForEach-Object { \"{0:x2}\" -f $_ })")
+        print("    (Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml")
 
 def check_and_fix_docker_compose_for_searxng():
     """Check and modify docker-compose.yml for SearXNG first run."""
     docker_compose_path = "docker-compose.yml"
-    
     if not os.path.exists(docker_compose_path):
         print(f"Warning: Docker Compose file not found at {docker_compose_path}")
         return
-    
+
     try:
         # Read the docker-compose.yml file
         with open(docker_compose_path, 'r') as file:
             content = file.read()
-        
+
         # Default to first run
         is_first_run = True
-        
+
         # Check if Docker is running and if the SearXNG container exists
         try:
             # Check if the SearXNG container is running
@@ -325,21 +344,19 @@ def check_and_fix_docker_compose_for_searxng():
                 ["docker", "ps", "--filter", "name=searxng", "--format", "{{.Names}}"],
                 capture_output=True, text=True, check=True
             )
-            
             searxng_containers = container_check.stdout.strip().split('\n')
-            
+
             # If SearXNG container is running, check inside for uwsgi.ini
             if any(container for container in searxng_containers if container):
                 container_name = next(container for container in searxng_containers if container)
                 print(f"Found running SearXNG container: {container_name}")
-                
+
                 # Check if uwsgi.ini exists inside the container
                 container_check = subprocess.run(
-                    ["docker", "exec", container_name, "sh", "-c", 
-                     "[ -f /etc/searxng/uwsgi.ini ] && echo 'found' || echo 'not_found'"],
+                    ["docker", "exec", container_name, "sh", "-c", "[ -f /etc/searxng/uwsgi.ini ] && echo 'found' || echo 'not_found'"],
                     capture_output=True, text=True, check=False
                 )
-                
+
                 if "found" in container_check.stdout:
                     print("Found uwsgi.ini inside the SearXNG container - not first run")
                     is_first_run = False
@@ -348,113 +365,91 @@ def check_and_fix_docker_compose_for_searxng():
                     is_first_run = True
             else:
                 print("No running SearXNG container found - assuming first run")
-                
         except Exception as e:
             print(f"Error checking Docker container: {e} - assuming first run")
-        
+
         if is_first_run and "cap_drop: - ALL" in content:
             print("First run detected for SearXNG. Temporarily removing 'cap_drop: - ALL' directive...")
             # Temporarily comment out the cap_drop line
-            modified_content = content.replace(
-                "cap_drop: - ALL", 
-                "# cap_drop: - ALL # Temporarily commented out for first run"
-            )
-            
+            modified_content = content.replace("cap_drop: - ALL", "# cap_drop: - ALL  # Temporarily commented out for first run")
+
             # Write the modified content back
             with open(docker_compose_path, 'w') as file:
                 file.write(modified_content)
-            
-            print("Note: After the first run completes successfully, you should re-add 'cap_drop: - ALL'")
-            
-        elif not is_first_run and "# cap_drop: - ALL # Temporarily commented out for first run" in content:
+
+            print("Note: After the first run completes successfully, you should re-add 'cap_drop: - ALL' to docker-compose.yml for security reasons.")
+        elif not is_first_run and "# cap_drop: - ALL  # Temporarily commented out for first run" in content:
             print("SearXNG has been initialized. Re-enabling 'cap_drop: - ALL' directive for security...")
             # Uncomment the cap_drop line
-            modified_content = content.replace(
-                "# cap_drop: - ALL # Temporarily commented out for first run", 
-                "cap_drop: - ALL"
-            )
-            
+            modified_content = content.replace("# cap_drop: - ALL  # Temporarily commented out for first run", "cap_drop: - ALL")
+
             # Write the modified content back
             with open(docker_compose_path, 'w') as file:
                 file.write(modified_content)
-                
+
     except Exception as e:
         print(f"Error checking/modifying docker-compose.yml for SearXNG: {e}")
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Start the local AI and Supabase services with RAG integration.'
-    )
-    parser.add_argument(
-        '--profile', 
-        choices=['cpu', 'gpu-nvidia', 'gpu-amd', 'none'], 
-        default='cpu',
-        help='Profile to use for Docker Compose (default: cpu)'
-    )
-    parser.add_argument(
-        '--environment', 
-        choices=['private', 'public'], 
-        default='private',
-        help='Environment to use for Docker Compose (default: private)'
-    )
-    parser.add_argument(
-        '--skip-schema-init',
-        action='store_true',
-        help='Skip RAG schema initialization (use if schema already exists)'
-    )
-    
+    parser = argparse.ArgumentParser(description='Start the local AI and Supabase services.')
+    parser.add_argument('--profile', choices=['cpu', 'gpu-nvidia', 'gpu-amd', 'none'], default='cpu',
+                      help='Profile to use for Docker Compose (default: cpu)')
+    parser.add_argument('--environment', choices=['private', 'public'], default='private',
+                      help='Environment to use for Docker Compose (default: private)')
+    parser.add_argument('--skip-rag-init', action='store_true',
+                      help='Skip RAG database initialization (for testing)')
     args = parser.parse_args()
-    
-    # Clone and prepare Supabase
+
     clone_supabase_repo()
     prepare_supabase_env()
     
-    # Prepare RAG schema for initialization (only if not skipping)
-    if not args.skip_schema_init:
-        schema_prepared = prepare_rag_schema()
-    else:
-        print("Skipping RAG schema preparation (--skip-schema-init flag set)")
-        schema_prepared = False
-    
+    # Prepare RAG schema before starting services
+    prepare_rag_schema()
+
     # Generate SearXNG secret key and check docker-compose.yml
     generate_searxng_secret_key()
     check_and_fix_docker_compose_for_searxng()
-    
-    # Stop existing containers
+
     stop_existing_containers(args.profile)
-    
+
     # Start Supabase first
     start_supabase(args.environment)
-    
-    # Wait for database to be ready
-    print("Waiting for Supabase to initialize...")
-    time.sleep(10)
-    
-    db_ready = wait_for_database()
-    
-    # If schema wasn't prepared during startup and database is ready, 
-    # try runtime initialization
-    if not args.skip_schema_init and not schema_prepared and db_ready:
-        print("Attempting runtime RAG schema initialization...")
-        initialize_rag_schema_runtime()
-    
-    # Give a bit more time for schema application
-    if db_ready and not args.skip_schema_init:
-        print("Allowing time for schema initialization...")
-        time.sleep(5)
-    
+
+    # Initialize RAG database (wait for DB and verify schema)
+    if not args.skip_rag_init:
+        try:
+            # Run async database initialization
+            success = asyncio.run(initialize_rag_database())
+            
+            if not success:
+                print("\n⚠ WARNING: RAG database initialization encountered issues")
+                print("The system will continue, but RAG functionality may not work")
+                print("You can manually apply the schema later with:")
+                print("  psql $DATABASE_URL < all-rag-strategies/implementation/sql/schema.sql")
+                print()
+        except Exception as e:
+            print(f"\nERROR: Failed to initialize RAG database: {e}")
+            print("Continuing with service startup...\n")
+    else:
+        print("Skipping RAG database initialization (--skip-rag-init flag)")
+        print("Waiting 10 seconds for Supabase to stabilize...")
+        time.sleep(10)
+
     # Then start the local AI services
     start_local_ai(args.profile, args.environment)
     
-    print("\n" + "=" * 80)
-    print("STARTUP COMPLETE")
-    print("=" * 80)
-    print("Services are now running!")
-    print("Access your services at:")
-    print("  - Open WebUI: http://localhost:8002")
-    print("  - n8n: http://localhost:8001")
-    print("  - Supabase Studio: http://localhost:8005")
-    print("=" * 80)
+    print("\n" + "="*60)
+    print("✓ All services started successfully!")
+    print("="*60)
+    print("\nNext steps:")
+    print("1. Access n8n at http://localhost:5678")
+    print("2. Access Open WebUI at http://localhost:3000")
+    print("3. Access Supabase Studio at http://localhost:8005")
+    print("\nTo ingest documents into the RAG system:")
+    print("  docker compose -p localai --profile ingestion up")
+    print("\nTo view logs:")
+    print("  docker compose -p localai logs -f")
+    print()
 
 if __name__ == "__main__":
     main()

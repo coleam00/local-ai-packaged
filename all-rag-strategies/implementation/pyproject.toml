@@ -14,6 +14,8 @@ dependencies = [
     "docling[vlm]>=2.55.0",
     "hf-xet>=1.1.8",
     "openai-whisper>=20250625",
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
 ]
 
 [tool.black]

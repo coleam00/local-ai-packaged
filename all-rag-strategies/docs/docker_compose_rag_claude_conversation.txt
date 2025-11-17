@@ -14,7 +14,6 @@ volumes:
   langfuse_clickhouse_data:
   langfuse_clickhouse_logs:
   langfuse_minio_data:
-  portainer_data:
 
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
@@ -55,18 +54,6 @@ x-init-ollama: &init-ollama
     - "sleep 3; OLLAMA_HOST=ollama:11434 ollama pull qwen2.5:7b-instruct-q4_K_M; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
 
 services:
-  litellm:
-    image: ghcr.io/berriai/litellm:latest
-    container_name: litellm
-    restart: unless-stopped
-    profiles: ["litellm"]
-    expose:
-      - 4000/tcp
-    environment:
-      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    command: ["litellm", "--port", "4000", "--num_workers", "2"]
-
   flowise:
     image: flowiseai/flowise
     restart: unless-stopped
@@ -143,6 +130,55 @@ services:
         - NEO4J_AUTH=${NEO4J_AUTH:-"neo4j/your_password"}
     restart: always
 
+  # RAG Ingestion Service (on-demand via --profile ingestion)
+  rag-ingestion:
+    profiles: ["ingestion"]
+    build:
+      context: ./all-rag-strategies/implementation
+      dockerfile: Dockerfile.rag
+    container_name: rag_ingestion
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LLM_CHOICE: ${LLM_CHOICE:-gpt-4o-mini}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+    volumes:
+      - ./all-rag-strategies/implementation/documents:/app/documents
+      - ./all-rag-strategies/implementation:/app
+    command: ["python", "-m", "ingestion.ingest", "--documents", "/app/documents"]
+    restart: "no"
+
+  # RAG Agent Service (always running, provides RAG capabilities)
+  rag-agent:
+    build:
+      context: ./all-rag-strategies/implementation
+      dockerfile: Dockerfile.rag
+    container_name: rag_agent
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LLM_CHOICE: ${LLM_CHOICE:-gpt-4o-mini}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      LOG_LEVEL: INFO
+    volumes:
+      - ./all-rag-strategies/implementation:/app
+    expose:
+      - 8000/tcp
+    command: ["python", "-m", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   caddy:
     container_name: caddy
     image: docker.io/library/caddy:2-alpine
@@ -169,9 +205,6 @@ services:
       - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME:-":8006"}
       - LANGFUSE_HOSTNAME=${LANGFUSE_HOSTNAME:-":8007"}
       - NEO4J_HOSTNAME=${NEO4J_HOSTNAME:-":8008"}
-      - RAG_HOSTNAME=${RAG_HOSTNAME:-":8009"}
-      - PORTAINER_HOSTNAME=${PORTAINER_HOSTNAME:-":8010"}
-      - LITELLM_HOSTNAME=${LITELLM_HOSTNAME:-":8011"}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-internal}
     cap_drop:
       - ALL
@@ -320,72 +353,6 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
-    # RAG Document Ingestion Service
-  rag-ingestion:
-    build:
-      context: ./all-rag-strategies/implementation
-      dockerfile: Dockerfile.rag
-    container_name: rag_ingestion
-    profiles:
-      - ingestion
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LLM_CHOICE=${LLM_CHOICE:-gpt-4o-mini}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
-    volumes:
-      - ./all-rag-strategies/implementation/documents:/app/documents
-      - ./all-rag-strategies/implementation:/app
-      - ./.env:/app/.env
-    command: ["uv", "run", "python", "ingestion/ingest.py", "--documents", "/app/documents"]
-    restart: "no"
-
-  # RAG Agent Service (Optional - for standalone CLI usage)
-  rag-agent:
-    build:
-      context: ./all-rag-strategies/implementation
-      dockerfile: Dockerfile.rag
-    container_name: rag_agent
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LLM_CHOICE=${LLM_CHOICE:-gpt-4o-mini}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
-    volumes:
-      - ./all-rag-strategies/implementation:/app
-      - ./.env:/app/.env
-    command: ["uv", "run", "python", "rag_agent.py"]
-    expose:
-      - 8000/tcp
-
-  # RAG FastAPI HTTP service
-  rag-api:
-    build:
-      context: ./all-rag-strategies/implementation
-      dockerfile: Dockerfile.rag
-    container_name: rag_api
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LLM_CHOICE=${LLM_CHOICE:-gpt-4o-mini}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
-    volumes:
-      - ./all-rag-strategies/implementation:/app
-      - ./.env:/app/.env
-    command: ["uv", "run", "python", "-m", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
-    expose:
-      - 8000/tcp
 
   redis:
     container_name: redis
@@ -436,17 +403,6 @@ services:
       options:
         max-size: "1m"
         max-file: "1"
-
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    restart: unless-stopped
-    expose:
-      - 9000/tcp
-      - 9443/tcp
-    volumes:
-      - ${DOCKER_SOCKET_LOCATION:-/var/run/docker.sock}:/var/run/docker.sock
-      - portainer_data:/data
 
   ollama-cpu:
     profiles: ["cpu"]

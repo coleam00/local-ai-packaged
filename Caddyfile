@@ -25,6 +25,16 @@
     reverse_proxy langfuse-web:3000
 }
 
+# RAG Agent API
+{$RAG_HOSTNAME} {
+    reverse_proxy rag-api:8000
+}
+
+# LiteLLM (optional profile)
+{$LITELLM_HOSTNAME} {
+    reverse_proxy litellm:4000
+}
+
 # # Ollama API
 # {$OLLAMA_HOSTNAME} {
 #     reverse_proxy ollama:11434
@@ -38,6 +48,11 @@
 # Neo4j
 {$NEO4J_HOSTNAME} {
     reverse_proxy neo4j:7474
+}
+
+# Portainer
+{$PORTAINER_HOSTNAME} {
+    reverse_proxy portainer:9443
 }
 
 import /etc/caddy/addons/*.conf

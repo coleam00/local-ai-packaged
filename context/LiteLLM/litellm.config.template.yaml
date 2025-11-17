@@ -1,0 +1,67 @@
+# LiteLLM unified gateway configuration (template)
+#
+# Usage (external host mode):
+#   export LITELLM_MASTER_KEY=sk-your-master-key
+#   export OPENAI_API_KEY=sk-your-provider-key   # if you want OpenAI routed
+#   export GITHUB_API_KEY=ghp_xxx                 # for Marketplace models (optional)
+#   litellm --config context/LiteLLM/litellm.config.template.yaml --port 4000
+#
+# Usage (container mode):
+#   docker compose --profile litellm up -d litellm
+#   Access via Caddy at http://${LITELLM_HOSTNAME}
+
+server:
+  num_workers: 2
+  # enable_cors: true
+  # cors_origins: ["*"]
+
+proxy:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  # Optional: enable batching or streaming defaults
+  # disable_collections: true
+
+# Global settings
+general_settings:
+  # disable_telemetry: true
+  # cache: redis
+  # cache_params:
+  #   type: redis
+  #   host: valkey
+  #   port: 6379
+
+# Example routes and models
+model_list:
+  # GitHub Marketplace models (API Key based)
+  - model_name: llama-3-1-405b
+    litellm_params:
+      model: github/Llama-3.1-405B-Instruct
+      api_key: os.environ/GITHUB_API_KEY
+
+  - model_name: phi-4
+    litellm_params:
+      model: github/Phi-4
+      api_key: os.environ/GITHUB_API_KEY
+
+  # OpenAI passthrough (if you set OPENAI_API_KEY)
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  # Groq example (if you set GROQ_API_KEY)
+  - model_name: llama3-groq-70b
+    litellm_params:
+      model: groq/llama-3.1-70b-versatile
+      api_key: os.environ/GROQ_API_KEY
+
+# Notes for GitHub Copilot models
+# - Use the automated toolchain to generate auto-headers-config.yaml:
+#     python context/LiteLLM/github_auth.py
+#     python context/LiteLLM/update-github-models.py
+#   Then run LiteLLM with the generated config to ensure proper extra_headers:
+#     litellm --config context/LiteLLM/auto-headers-config.yaml --port 4000
