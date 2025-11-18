@@ -1,6 +1,3 @@
-include:
-  - ./supabase/docker/docker-compose.yml
-
 volumes:
   n8n_storage:
   ollama_storage:
@@ -332,11 +329,8 @@ services:
     container_name: rag_ingestion
     profiles:
       - ingestion
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LLM_CHOICE=${LLM_CHOICE:-gpt-4o-mini}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
@@ -354,11 +348,8 @@ services:
       dockerfile: Dockerfile.rag
     container_name: rag_agent
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LLM_CHOICE=${LLM_CHOICE:-gpt-4o-mini}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
@@ -376,11 +367,8 @@ services:
       dockerfile: Dockerfile.rag
     container_name: rag_api
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LLM_CHOICE=${LLM_CHOICE:-gpt-4o-mini}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
