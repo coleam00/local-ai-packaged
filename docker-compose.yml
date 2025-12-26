@@ -69,6 +69,8 @@ services:
     volumes:
         - ~/.flowise:/root/.flowise
     entrypoint: /bin/sh -c "sleep 3; flowise start"
+    labels:
+      dev.orbstack.domains: flowise.local
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
@@ -80,6 +82,8 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - open-webui:/app/backend/data
+    labels:
+      dev.orbstack.domains: open-webui.local
 
   n8n-import:
     <<: *service-n8n
@@ -104,6 +108,8 @@ services:
     depends_on:
       n8n-import:
         condition: service_completed_successfully
+    labels:
+      dev.orbstack.domains: n8n.local
 
   qdrant:
     image: qdrant/qdrant
@@ -114,6 +120,8 @@ services:
       - 6334/tcp
     volumes:
       - qdrant_storage:/qdrant/storage
+    labels:
+      dev.orbstack.domains: qdrant.local
 
   neo4j:
     image: neo4j:latest
@@ -129,6 +137,8 @@ services:
     environment:
         - NEO4J_AUTH=${NEO4J_AUTH:-"neo4j/your_password"}
     restart: always
+    labels:
+      dev.orbstack.domains: neo4j.local
 
   caddy:
     container_name: caddy
@@ -166,6 +176,8 @@ services:
       options:
         max-size: "1m"
         max-file: "1"
+    labels:
+      dev.orbstack.domains: caddy.local
 
   langfuse-worker:
     image: langfuse/langfuse-worker:3
@@ -244,6 +256,8 @@ services:
       LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
       LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-}
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
+    labels:
+      dev.orbstack.domains: langfuse.local
 
   clickhouse:
     image: clickhouse/clickhouse-server
@@ -266,6 +280,8 @@ services:
       timeout: 5s
       retries: 10
       start_period: 1s
+    labels:
+      dev.orbstack.domains: clickhouse.local
 
   minio:
     image: minio/minio
@@ -354,10 +370,14 @@ services:
       options:
         max-size: "1m"
         max-file: "1"
+    labels:
+      dev.orbstack.domains: searxng.local
 
   ollama-cpu:
     profiles: ["cpu"]
     <<: *service-ollama
+    labels:
+      dev.orbstack.domains: ollama-cpu.local
 
   ollama-gpu:
     profiles: ["gpu-nvidia"]
@@ -369,6 +389,8 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    labels:
+      dev.orbstack.domains: ollama-gpu.local
 
   ollama-gpu-amd:
     profiles: ["gpu-amd"]
@@ -377,6 +399,8 @@ services:
     devices:
       - "/dev/kfd"
       - "/dev/dri"
+    labels:
+      dev.orbstack.domains: ollama-gpu-amd.local
 
   ollama-pull-llama-cpu:
     profiles: ["cpu"]
