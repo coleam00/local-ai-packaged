@@ -44,9 +44,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   checkSetupStatus: async () => {
     try {
       const status = await authApi.getSetupStatus();
-      set({ setupRequired: status.setup_required });
+      set({ setupRequired: status.setup_required, isLoading: false });
       return status.setup_required;
     } catch {
+      set({ isLoading: false });
       return false;
     }
   },
