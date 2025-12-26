@@ -71,6 +71,35 @@ python start_services.py --profile <profile>
 - `n8n_pipe.py` - Open WebUI function to call n8n workflows via webhook
 - Shared folder mounted at `/data/shared` inside n8n container
 
+## n8n Workflow Management
+
+After starting services, import the pre-configured RAG workflows:
+
+```bash
+python scripts/n8n_import.py import
+```
+
+### Available Commands
+
+```bash
+# Import workflows from ./n8n/backup/workflows/
+python scripts/n8n_import.py import
+
+# Export/backup workflows to ./n8n/backup/workflows/
+python scripts/n8n_import.py export
+
+# List workflows in n8n
+python scripts/n8n_import.py list
+
+# Import specific workflow file
+python scripts/n8n_import.py import --file ./n8n/backup/workflows/V1_Local_RAG_AI_Agent.json
+
+# Custom n8n URL (for remote instances)
+python scripts/n8n_import.py import --url http://n8n.example.com:5678
+```
+
+Note: After importing workflows, configure credentials (Postgres, Ollama) manually in the n8n UI.
+
 ## Environment Configuration
 
 Copy `.env.example` to `.env` and configure:
