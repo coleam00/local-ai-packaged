@@ -1,73 +1,109 @@
-# React + TypeScript + Vite
+# Management UI Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React frontend for the local-ai-packaged management interface.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Dashboard with system overview and service status
+- Service management with group filtering
+- Interactive dependency visualization (React Flow)
+- Real-time log viewer with WebSocket streaming
+- Configuration editor with validation
+- Setup wizard for first-time configuration
+- Dark theme UI
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- Zustand (state management)
+- React Router
+- React Flow (dependency graph)
+- Lucide React (icons)
 
-## Expanding the ESLint configuration
+## Installation
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Start dev server (hot reload)
+npm run dev
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# The frontend expects the backend at http://localhost:8000
+# Configure proxy in vite.config.ts if needed
+```
+
+## Building
+
+```bash
+# Type check and build
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## Linting
+
+```bash
+npm run lint
+```
+
+## Project Structure
+
+```
+frontend/
+├── src/
+│   ├── api/              # API client functions
+│   │   ├── auth.ts       # Authentication API
+│   │   ├── client.ts     # Axios instance
+│   │   ├── config.ts     # Configuration API
+│   │   ├── services.ts   # Services API
+│   │   └── websocket.ts  # WebSocket utilities
+│   ├── components/
+│   │   ├── common/       # Shared UI components
+│   │   ├── config/       # Configuration components
+│   │   ├── layout/       # Layout components
+│   │   ├── logs/         # Log viewer components
+│   │   ├── services/     # Service management components
+│   │   └── setup/        # Setup wizard components
+│   ├── hooks/            # Custom React hooks
+│   ├── pages/            # Page components
+│   ├── store/            # Zustand stores
+│   ├── types/            # TypeScript types
+│   ├── App.tsx           # Main app component
+│   ├── main.tsx          # Entry point
+│   └── index.css         # Global styles
+├── index.html
+├── package.json
+├── tailwind.config.js
+├── tsconfig.json
+└── vite.config.ts
+```
+
+## Pages
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/` | Dashboard | System overview, quick stats |
+| `/services` | Services | Service list with controls |
+| `/dependencies` | Dependencies | Interactive dependency graph |
+| `/config` | Configuration | .env editor with validation |
+| `/logs` | Logs | Real-time log streaming |
+| `/setup-wizard` | SetupWizard | Guided first-time setup |
+| `/login` | Login | Authentication |
+| `/setup` | Setup | Initial admin account creation |
+
+## Environment Variables
+
+Create a `.env` file for local development:
+
+```env
+VITE_API_URL=http://localhost:8000/api
 ```
