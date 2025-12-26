@@ -67,9 +67,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
       });
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { detail?: string } } };
+      const err = error as { response?: { data?: { detail?: string | Array<{ msg: string }> } } };
+      let errorMessage = 'Login failed';
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'string') {
+        errorMessage = detail;
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        errorMessage = detail.map((e) => e.msg).join(', ');
+      }
       set({
-        error: err.response?.data?.detail || 'Login failed',
+        error: errorMessage,
         isLoading: false,
       });
       throw error;
@@ -93,9 +100,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         setupRequired: false,
       });
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { detail?: string } } };
+      const err = error as { response?: { data?: { detail?: string | Array<{ msg: string }> } } };
+      let errorMessage = 'Setup failed';
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'string') {
+        errorMessage = detail;
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        errorMessage = detail.map((e) => e.msg).join(', ');
+      }
       set({
-        error: err.response?.data?.detail || 'Setup failed',
+        error: errorMessage,
         isLoading: false,
       });
       throw error;

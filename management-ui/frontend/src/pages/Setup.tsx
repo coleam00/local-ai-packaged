@@ -37,15 +37,15 @@ export const Setup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900">
       <Card className="w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-2">Welcome!</h2>
-        <p className="text-gray-600 text-center mb-6">
+        <h2 className="text-2xl font-bold text-center mb-2 text-white">Welcome!</h2>
+        <p className="text-gray-400 text-center mb-6">
           Create your admin account to get started.
         </p>
 
         {(error || validationError) && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-900/30 border border-red-700 text-red-400 px-4 py-3 rounded mb-4">
             {error || validationError}
           </div>
         )}
@@ -56,6 +56,7 @@ export const Setup: React.FC = () => {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
             required
             minLength={3}
           />
@@ -64,6 +65,7 @@ export const Setup: React.FC = () => {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
             required
             minLength={8}
           />
@@ -72,6 +74,7 @@ export const Setup: React.FC = () => {
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
             required
           />
           <Button type="submit" className="w-full" isLoading={isLoading}>
