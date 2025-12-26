@@ -1,0 +1,37 @@
+services:
+  management-ui:
+    build:
+      context: ./management-ui
+      dockerfile: Dockerfile
+    image: localai-management:latest
+    container_name: localai-management
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      # Docker socket for container management
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Main project directory (read-only for compose files)
+      - ./:/config:ro
+      # Writable .env file
+      - ./.env:/config/.env:rw
+      # Backup directory
+      - ./.env_backups:/config/.env_backups:rw
+      # Persistent database
+      - management-data:/data
+    environment:
+      - DATABASE_URL=sqlite:////data/management.db
+      - COMPOSE_BASE_PATH=/config
+      - SECRET_KEY=${MANAGEMENT_SECRET_KEY:-change-me-in-production}
+    networks:
+      - default
+    labels:
+      - "com.docker.compose.project=localai"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  management-data:

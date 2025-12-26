@@ -1,0 +1,35 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.coverage
+htmlcov
+.venv
+venv
+*.egg-info
+
+# Node
+node_modules
+.npm
+.cache
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Build outputs
+dist
+build
+*.log
+
+# Local data
+data/
+*.db
+*.sqlite
+
+# Git
+.git
+.gitignore

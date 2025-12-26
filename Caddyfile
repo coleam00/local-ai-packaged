@@ -40,6 +40,11 @@
     reverse_proxy neo4j:7474
 }
 
+# Management UI
+{$MANAGEMENT_HOSTNAME:-":9009"} {
+    reverse_proxy management-ui:9000
+}
+
 import /etc/caddy/addons/*.conf
 
 # # SearXNG
