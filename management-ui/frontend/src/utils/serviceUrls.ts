@@ -21,16 +21,11 @@ const SERVICE_URL_MAP: Record<string, ServiceUrlConfig> = {
   'minio': { port: 9011, name: 'MinIO Console' },
   'clickhouse': { port: 8123, name: 'ClickHouse HTTP' },
 
-  // Supabase services (via Caddy proxy - Kong not directly exposed)
-  'kong': { port: 8005, name: 'Supabase API' },
-  'studio': { port: 8005, path: '/project/default', name: 'Supabase Studio' },
-  'supabase-analytics': { port: 8005, name: 'Supabase' },
-
-  // Services without direct web UI (API only) - commented out but kept for reference
-  // 'ollama-cpu': { port: 11434, name: 'Ollama API' },
-  // 'ollama-gpu': { port: 11434, name: 'Ollama API' },
-  // 'postgres': { port: 5433, name: 'Postgres' },
-  // 'redis': { port: 6379, name: 'Redis' },
+  // Supabase services (from supabase/docker/docker-compose.yml)
+  'kong': { port: 8000, name: 'Supabase API' },
+  'studio': { port: 8000, path: '/project/default', name: 'Supabase Studio' },
+  'analytics': { port: 4000, name: 'Supabase Analytics' },
+  'supabase-analytics': { port: 4000, name: 'Supabase Analytics' },
 };
 
 /**
