@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, Body
 from sqlalchemy.orm import Session
 from ...schemas.setup import (
     SetupStatusResponse, SetupConfigRequest, SetupProgressResponse,
-    ServiceSelectionInfo, ServiceSelectionValidation, StackConfigResponse
+    ServiceSelectionInfo, ServiceSelectionValidation, StackConfigResponse,
+    PortCheckResponse, PortValidation
 )
+from typing import Dict
 from ...services.setup_service import SetupService
 from ...core.secret_generator import generate_all_secrets
 from ..deps import get_current_user
@@ -110,6 +112,29 @@ async def generate_secrets_for_setup(
     return {"secrets": secrets}
 
 
+@router.get("/check-ports", response_model=PortCheckResponse)
+async def check_port_availability(
+    enabled_services: str = "",  # Comma-separated list
+    setup_service: SetupService = Depends(get_setup_service),
+    _: dict = Depends(get_current_user)
+):
+    """Check port availability for setup."""
+    services = [s.strip() for s in enabled_services.split(",") if s.strip()] if enabled_services else None
+    result = setup_service.check_port_availability(services)
+    return PortCheckResponse(**result)
+
+
+@router.post("/validate-ports", response_model=PortValidation)
+async def validate_port_configuration(
+    port_config: Dict[str, Dict[str, int]] = Body(...),
+    setup_service: SetupService = Depends(get_setup_service),
+    _: dict = Depends(get_current_user)
+):
+    """Validate custom port configuration."""
+    result = setup_service.validate_port_configuration(port_config)
+    return PortValidation(**result)
+
+
 @router.post("/complete", response_model=SetupProgressResponse)
 async def complete_setup(
     config: SetupConfigRequest,
@@ -142,6 +167,7 @@ async def complete_setup(
             setup_completed=True
         )
         stack_config.enabled_services = all_enabled
+        stack_config.port_overrides = config.port_overrides
         db.add(stack_config)
         db.commit()
 

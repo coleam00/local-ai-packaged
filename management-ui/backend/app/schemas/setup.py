@@ -32,6 +32,7 @@ class SetupConfigRequest(BaseModel):
     enabled_services: List[str] = []
     secrets: Dict[str, str] = {}
     hostnames: Dict[str, str] = {}  # For public environment
+    port_overrides: Dict[str, Dict[str, int]] = {}  # service_name -> {port_name -> port}
 
 
 class SetupStepResult(BaseModel):
@@ -80,3 +81,35 @@ class StackConfigResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Port configuration schemas
+class PortStatus(BaseModel):
+    """Status of a single port."""
+    port: int
+    available: bool
+    used_by: Optional[str] = None
+
+
+class ServicePortScan(BaseModel):
+    """Port scan result for a service."""
+    service_name: str
+    display_name: str
+    ports: Dict[str, PortStatus]  # port_name -> status
+    all_available: bool
+    suggested_ports: Dict[str, int]  # port_name -> suggested alternative
+
+
+class PortCheckResponse(BaseModel):
+    """Response from port availability check."""
+    has_conflicts: bool
+    services: List[ServicePortScan]
+    total_ports_checked: int
+    conflicts_count: int
+
+
+class PortValidation(BaseModel):
+    """Validation result for port configuration."""
+    valid: bool
+    errors: List[str]
+    warnings: List[str]

@@ -1,66 +1,66 @@
 services:
   flowise:
     ports:
-      - 127.0.0.1:3001:3001
+      - 127.0.0.1:${FLOWISE_PORT:-3001}:3001
 
   open-webui:
     ports:
-      - 127.0.0.1:8080:8080
+      - 127.0.0.1:${OPENWEBUI_PORT:-8080}:8080
 
   n8n:
     ports:
-      - 127.0.0.1:5678:5678
+      - 127.0.0.1:${N8N_PORT:-5678}:5678
 
   qdrant:
     ports:
-      - 127.0.0.1:6333:6333
-      - 127.0.0.1:6334:6334
+      - 127.0.0.1:${QDRANT_HTTP_PORT:-6333}:6333
+      - 127.0.0.1:${QDRANT_GRPC_PORT:-6334}:6334
 
   neo4j:
     ports:
-      - 127.0.0.1:7473:7473
-      - 127.0.0.1:7474:7474
-      - 127.0.0.1:7687:7687
+      - 127.0.0.1:${NEO4J_HTTPS_PORT:-7473}:7473
+      - 127.0.0.1:${NEO4J_HTTP_PORT:-7474}:7474
+      - 127.0.0.1:${NEO4J_BOLT_PORT:-7687}:7687
 
   langfuse-worker:
     ports:
-      - 127.0.0.1:3030:3030
+      - 127.0.0.1:${LANGFUSE_WORKER_PORT:-3030}:3030
 
   langfuse-web:
     ports:
-      - 127.0.0.1:3000:3000
+      - 127.0.0.1:${LANGFUSE_PORT:-3000}:3000
 
   clickhouse:
     ports:
-      - 127.0.0.1:8123:8123
-      - 127.0.0.1:9000:9000
-      - 127.0.0.1:9009:9009
+      - 127.0.0.1:${CLICKHOUSE_HTTP_PORT:-8123}:8123
+      - 127.0.0.1:${CLICKHOUSE_NATIVE_PORT:-9000}:9000
+      - 127.0.0.1:${CLICKHOUSE_MYSQL_PORT:-9009}:9009
 
   minio:
     ports:
-      - 127.0.0.1:9010:9000
-      - 127.0.0.1:9011:9001
+      - 127.0.0.1:${MINIO_API_PORT:-9010}:9000
+      - 127.0.0.1:${MINIO_CONSOLE_PORT:-9011}:9001
 
   postgres:
     ports:
-      - 127.0.0.1:5433:5432                
+      - 127.0.0.1:${LANGFUSE_POSTGRES_PORT:-5433}:5432
 
   redis:
     ports:
-      - 127.0.0.1:6379:6379
+      - 127.0.0.1:${REDIS_PORT:-6379}:6379
 
   searxng:
     ports:
-      - 127.0.0.1:8081:8080
+      - 127.0.0.1:${SEARXNG_PORT:-8081}:8080
 
   ollama-cpu:
     ports:
-      - 127.0.0.1:11434:11434
+      - 127.0.0.1:${OLLAMA_PORT:-11434}:11434
 
   ollama-gpu:
     ports:
-      - 127.0.0.1:11434:11434
-      
+      - 127.0.0.1:${OLLAMA_PORT:-11434}:11434
+
   ollama-gpu-amd:
     ports:
-      - 127.0.0.1:11434:11434
+      - 127.0.0.1:${OLLAMA_PORT:-11434}:11434

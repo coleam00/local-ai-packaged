@@ -52,6 +52,33 @@ export interface FixResult {
   message: string;
 }
 
+export interface PortStatus {
+  port: number;
+  available: boolean;
+  used_by: string | null;
+}
+
+export interface ServicePortScan {
+  service_name: string;
+  display_name: string;
+  ports: Record<string, PortStatus>;
+  all_available: boolean;
+  suggested_ports: Record<string, number>;
+}
+
+export interface PortCheckResponse {
+  has_conflicts: boolean;
+  services: ServicePortScan[];
+  total_ports_checked: number;
+  conflicts_count: number;
+}
+
+export interface PortValidation {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
 export const setupApi = {
   async getStatus(): Promise<SetupStatus> {
     const response = await apiClient.get<SetupStatus>('/setup/status');
@@ -100,11 +127,23 @@ export const setupApi = {
     return response.data.secrets;
   },
 
+  async checkPorts(enabledServices?: string[]): Promise<PortCheckResponse> {
+    const params = enabledServices ? { enabled_services: enabledServices.join(',') } : {};
+    const response = await apiClient.get<PortCheckResponse>('/setup/check-ports', { params });
+    return response.data;
+  },
+
+  async validatePorts(portConfig: Record<string, Record<string, number>>): Promise<PortValidation> {
+    const response = await apiClient.post<PortValidation>('/setup/validate-ports', portConfig);
+    return response.data;
+  },
+
   async complete(config: {
     profile: string;
     environment: string;
     secrets: Record<string, string>;
     enabled_services: string[];
+    port_overrides?: Record<string, Record<string, number>>;
   }): Promise<{ status: string; error?: string }> {
     const response = await apiClient.post('/setup/complete', config);
     return response.data;

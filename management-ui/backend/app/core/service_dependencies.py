@@ -18,6 +18,7 @@ class ServiceConfig:
     default_enabled: bool = True
     profiles: List[str] = field(default_factory=list)  # Empty = always run
     category: str = "optional"  # core, infrastructure, optional
+    default_ports: Dict[str, int] = field(default_factory=dict)  # {port_name: default_port}
 
 
 # Service dependency definitions
@@ -155,7 +156,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         dependencies=[],
         profiles=["cpu"],
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"http": 11434}
     ),
     "ollama-gpu": ServiceConfig(
         name="ollama-gpu",
@@ -165,7 +167,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         dependencies=[],
         profiles=["gpu-nvidia"],
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"http": 11434}
     ),
     "ollama-gpu-amd": ServiceConfig(
         name="ollama-gpu-amd",
@@ -175,7 +178,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         dependencies=[],
         profiles=["gpu-amd"],
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"http": 11434}
     ),
     "open-webui": ServiceConfig(
         name="open-webui",
@@ -184,7 +188,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="core_ai",
         dependencies=[],  # Connects to Ollama but doesn't require it
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"http": 8080}
     ),
     "flowise": ServiceConfig(
         name="flowise",
@@ -193,7 +198,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="core_ai",
         dependencies=[],
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"http": 3001}
     ),
 
     # === WORKFLOW ===
@@ -204,7 +210,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="workflow",
         dependencies=["db"],
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"http": 5678}
     ),
 
     # === DATABASES ===
@@ -215,7 +222,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="database",
         dependencies=[],
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"http": 6333, "grpc": 6334}
     ),
     "neo4j": ServiceConfig(
         name="neo4j",
@@ -224,7 +232,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="database",
         dependencies=[],
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"https": 7473, "http": 7474, "bolt": 7687}
     ),
 
     # === OBSERVABILITY (Langfuse) ===
@@ -235,7 +244,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="observability",
         dependencies=[],
         default_enabled=True,
-        category="infrastructure"
+        category="infrastructure",
+        default_ports={"db": 5433}
     ),
     "redis": ServiceConfig(
         name="redis",
@@ -244,7 +254,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="infrastructure",
         dependencies=[],
         default_enabled=True,
-        category="infrastructure"
+        category="infrastructure",
+        default_ports={"db": 6379}
     ),
     "clickhouse": ServiceConfig(
         name="clickhouse",
@@ -253,7 +264,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="observability",
         dependencies=[],
         default_enabled=True,
-        category="infrastructure"
+        category="infrastructure",
+        default_ports={"http": 8123, "native": 9000, "mysql": 9009}
     ),
     "minio": ServiceConfig(
         name="minio",
@@ -262,7 +274,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="observability",
         dependencies=[],
         default_enabled=True,
-        category="infrastructure"
+        category="infrastructure",
+        default_ports={"api": 9010, "console": 9011}
     ),
     "langfuse-worker": ServiceConfig(
         name="langfuse-worker",
@@ -271,7 +284,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="observability",
         dependencies=["postgres", "minio", "redis", "clickhouse"],
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"http": 3030}
     ),
     "langfuse-web": ServiceConfig(
         name="langfuse-web",
@@ -280,7 +294,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="observability",
         dependencies=["postgres", "minio", "redis", "clickhouse"],
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"http": 3000}
     ),
 
     # === INFRASTRUCTURE ===
@@ -300,7 +315,8 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
         group="infrastructure",
         dependencies=[],
         default_enabled=True,
-        category="optional"
+        category="optional",
+        default_ports={"http": 8081}
     ),
 }
 

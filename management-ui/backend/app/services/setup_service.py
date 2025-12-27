@@ -14,6 +14,8 @@ from ..schemas.setup import (
     SetupStepResult, ServiceSelectionInfo, ServiceSelectionValidation
 )
 from ..core.service_dependencies import SERVICE_CONFIGS, SERVICE_GROUPS, validate_selection
+from ..core.port_scanner import PortScanner, get_all_default_ports
+from typing import Dict
 
 
 class SetupService:
@@ -117,6 +119,104 @@ class SetupService:
     def validate_service_selection(self, selected: List[str], profile: str) -> dict:
         """Validate a service selection."""
         return validate_selection(selected, profile)
+
+    def check_port_availability(self, enabled_services: List[str] = None) -> dict:
+        """
+        Check port availability for selected services.
+        Returns scan results with conflicts and suggestions.
+        """
+        scanner = PortScanner()
+        scanner.load_docker_ports(self.docker_client)
+
+        # Get ports to check
+        all_ports = get_all_default_ports()
+
+        # Filter to enabled services if specified
+        if enabled_services:
+            all_ports = {
+                name: ports for name, ports in all_ports.items()
+                if name in enabled_services
+            }
+
+        results = []
+        total_ports = 0
+        conflicts = 0
+
+        for service_name, default_ports in all_ports.items():
+            if not default_ports:
+                continue
+
+            config = SERVICE_CONFIGS.get(service_name)
+            if not config:
+                continue
+
+            result = scanner.scan_service_ports(
+                service_name=service_name,
+                display_name=config.display_name,
+                default_ports=default_ports
+            )
+            results.append({
+                "service_name": result.service_name,
+                "display_name": result.display_name,
+                "ports": {
+                    name: {
+                        "port": ps.port,
+                        "available": ps.available,
+                        "used_by": ps.used_by
+                    }
+                    for name, ps in result.ports.items()
+                },
+                "all_available": result.all_available,
+                "suggested_ports": result.suggested_ports
+            })
+
+            total_ports += len(default_ports)
+            if not result.all_available:
+                conflicts += sum(1 for ps in result.ports.values() if not ps.available)
+
+        return {
+            "has_conflicts": conflicts > 0,
+            "services": results,
+            "total_ports_checked": total_ports,
+            "conflicts_count": conflicts
+        }
+
+    def validate_port_configuration(self, port_config: Dict[str, Dict[str, int]]) -> dict:
+        """
+        Validate user's custom port configuration.
+        Check that all specified ports are available.
+        """
+        scanner = PortScanner()
+        scanner.load_docker_ports(self.docker_client)
+
+        errors = []
+        warnings = []
+
+        # Check each configured port
+        all_ports = []
+        for service_name, ports in port_config.items():
+            for port_name, port in ports.items():
+                # Check availability
+                available, used_by = scanner.is_port_available(port)
+                if not available:
+                    errors.append(f"Port {port} ({service_name}.{port_name}) is in use by {used_by}")
+
+                # Check for duplicates
+                if port in all_ports:
+                    errors.append(f"Port {port} is configured multiple times")
+                all_ports.append(port)
+
+                # Check port range
+                if port < 1024:
+                    warnings.append(f"Port {port} requires root/admin privileges")
+                if port > 65535:
+                    errors.append(f"Port {port} is invalid (must be 1-65535)")
+
+        return {
+            "valid": len(errors) == 0,
+            "errors": errors,
+            "warnings": warnings
+        }
 
     def preflight_check(self) -> dict:
         """Check environment state before setup."""
@@ -280,7 +380,7 @@ class SetupService:
             )
 
     def prepare_env_file(self, config: SetupConfigRequest) -> SetupStepResult:
-        """Prepare .env file with secrets and hostnames."""
+        """Prepare .env file with secrets, hostnames, and port configuration."""
         try:
             # Start with existing or default config
             if self.env_manager.env_file_exists():
@@ -307,6 +407,38 @@ class SetupService:
             # Apply hostnames if public environment
             if config.environment.value == "public":
                 env.update(config.hostnames)
+
+            # Apply port overrides (only for private environment)
+            if config.port_overrides and config.environment.value == "private":
+                port_env_mapping = {
+                    ("flowise", "http"): "FLOWISE_PORT",
+                    ("open-webui", "http"): "OPENWEBUI_PORT",
+                    ("n8n", "http"): "N8N_PORT",
+                    ("qdrant", "http"): "QDRANT_HTTP_PORT",
+                    ("qdrant", "grpc"): "QDRANT_GRPC_PORT",
+                    ("neo4j", "https"): "NEO4J_HTTPS_PORT",
+                    ("neo4j", "http"): "NEO4J_HTTP_PORT",
+                    ("neo4j", "bolt"): "NEO4J_BOLT_PORT",
+                    ("langfuse-web", "http"): "LANGFUSE_PORT",
+                    ("langfuse-worker", "http"): "LANGFUSE_WORKER_PORT",
+                    ("clickhouse", "http"): "CLICKHOUSE_HTTP_PORT",
+                    ("clickhouse", "native"): "CLICKHOUSE_NATIVE_PORT",
+                    ("clickhouse", "mysql"): "CLICKHOUSE_MYSQL_PORT",
+                    ("minio", "api"): "MINIO_API_PORT",
+                    ("minio", "console"): "MINIO_CONSOLE_PORT",
+                    ("postgres", "db"): "LANGFUSE_POSTGRES_PORT",
+                    ("redis", "db"): "REDIS_PORT",
+                    ("searxng", "http"): "SEARXNG_PORT",
+                    ("ollama-cpu", "http"): "OLLAMA_PORT",
+                    ("ollama-gpu", "http"): "OLLAMA_PORT",
+                    ("ollama-gpu-amd", "http"): "OLLAMA_PORT",
+                }
+
+                for service_name, ports in config.port_overrides.items():
+                    for port_name, port_value in ports.items():
+                        env_var = port_env_mapping.get((service_name, port_name))
+                        if env_var:
+                            env[env_var] = str(port_value)
 
             # Save
             self.env_manager.save(env, backup=True)

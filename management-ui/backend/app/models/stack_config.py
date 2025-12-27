@@ -12,6 +12,7 @@ class StackConfig(Base):
     profile = Column(String(20), nullable=False, default="cpu")
     environment = Column(String(20), nullable=False, default="private")
     enabled_services_json = Column(Text, nullable=False, default="[]")
+    port_overrides_json = Column(Text, nullable=False, default="{}")
     setup_completed = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
@@ -28,3 +29,16 @@ class StackConfig(Base):
     def enabled_services(self, value: list):
         """Set enabled services from a list."""
         self.enabled_services_json = json.dumps(value)
+
+    @property
+    def port_overrides(self) -> dict:
+        """Get port overrides as a dict."""
+        try:
+            return json.loads(self.port_overrides_json)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    @port_overrides.setter
+    def port_overrides(self, value: dict):
+        """Set port overrides from a dict."""
+        self.port_overrides_json = json.dumps(value)

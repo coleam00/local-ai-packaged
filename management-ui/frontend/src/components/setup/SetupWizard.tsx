@@ -5,6 +5,7 @@ import { Card } from '../common/Card';
 import { PreflightStep } from './PreflightStep';
 import { ProfileStep } from './ProfileStep';
 import { ServicesStep } from './ServicesStep';
+import { PortsStep } from './PortsStep';
 import { EnvironmentStep } from './EnvironmentStep';
 import { SecretsStep } from './SecretsStep';
 import { ConfirmStep } from './ConfirmStep';
@@ -12,14 +13,15 @@ import { apiClient } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { Check, ChevronLeft, ChevronRight, Rocket, AlertCircle, Loader2 } from 'lucide-react';
 
-const STEPS = ['preflight', 'profile', 'services', 'environment', 'secrets', 'confirm'] as const;
-const STEP_LABELS = ['Check', 'Profile', 'Services', 'Environment', 'Secrets', 'Confirm'];
+const STEPS = ['preflight', 'profile', 'services', 'ports', 'environment', 'secrets', 'confirm'] as const;
+const STEP_LABELS = ['Check', 'Profile', 'Services', 'Ports', 'Environment', 'Secrets', 'Confirm'];
 
 interface SetupConfig {
   profile: string;
   environment: string;
   secrets: Record<string, string>;
   enabled_services: string[];
+  port_overrides: Record<string, Record<string, number>>;
 }
 
 interface SetupResult {
@@ -43,16 +45,23 @@ export const SetupWizard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [setupResult, setSetupResult] = useState<SetupResult | null>(null);
   const [preflightReady, setPreflightReady] = useState(false);
+  const [portsReady, setPortsReady] = useState(false);
   const [config, setConfig] = useState<SetupConfig>({
     profile: 'cpu',
     environment: 'private',
     secrets: {},
     enabled_services: [],
+    port_overrides: {},
   });
 
   const handleNext = () => {
-    if (currentStep < STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
+    let nextStep = currentStep + 1;
+    // Skip ports step for public environment
+    if (STEPS[nextStep] === 'ports' && config.environment === 'public') {
+      nextStep++;
+    }
+    if (nextStep < STEPS.length) {
+      setCurrentStep(nextStep);
     }
   };
 
@@ -93,6 +102,8 @@ export const SetupWizard: React.FC = () => {
         return preflightReady;
       case 'services':
         return config.enabled_services.length > 0 || true; // Allow proceeding with defaults
+      case 'ports':
+        return portsReady;
       case 'secrets':
         return Object.keys(config.secrets).length > 0;
       default:
@@ -117,6 +128,15 @@ export const SetupWizard: React.FC = () => {
             profile={config.profile}
             value={config.enabled_services}
             onChange={(enabled_services) => setConfig({ ...config, enabled_services })}
+          />
+        );
+      case 'ports':
+        return (
+          <PortsStep
+            enabledServices={config.enabled_services}
+            value={config.port_overrides}
+            onChange={(port_overrides) => setConfig({ ...config, port_overrides })}
+            onReady={setPortsReady}
           />
         );
       case 'environment':
