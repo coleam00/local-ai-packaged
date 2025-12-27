@@ -65,8 +65,58 @@ async def stream_service_logs(
             })
             return
 
-        # Stream logs
-        for log_line in docker_client.stream_logs(service_name, tail=tail):
+        # Get the container for streaming
+        container_obj = docker_client.client.containers.get(container["full_id"])
+
+        # First, send recent logs (non-streaming)
+        recent_logs = container_obj.logs(tail=tail, timestamps=False).decode("utf-8", errors="replace")
+        for line in recent_logs.strip().split("\n"):
+            if line:
+                await websocket.send_json({
+                    "type": "log",
+                    "service": service_name,
+                    "content": line.strip()
+                })
+
+        # Then stream new logs using asyncio.to_thread with a generator wrapper
+        async def async_log_generator():
+            """Wrap blocking log stream in async generator."""
+            import queue
+            import threading
+
+            log_queue: queue.Queue[str | None] = queue.Queue()
+            stop_flag = threading.Event()
+
+            def read_logs():
+                try:
+                    # Stream only new logs (since=now, no tail)
+                    for log in container_obj.logs(stream=True, follow=True, tail=0):
+                        if stop_flag.is_set():
+                            break
+                        log_queue.put(log.decode("utf-8", errors="replace"))
+                except Exception:
+                    pass
+                finally:
+                    log_queue.put(None)
+
+            thread = threading.Thread(target=read_logs, daemon=True)
+            thread.start()
+
+            try:
+                while True:
+                    try:
+                        # Non-blocking get with timeout
+                        line = await asyncio.to_thread(log_queue.get, timeout=1.0)
+                        if line is None:
+                            break
+                        yield line
+                    except Exception:
+                        # Timeout or error, check if we should continue
+                        continue
+            finally:
+                stop_flag.set()
+
+        async for log_line in async_log_generator():
             await websocket.send_json({
                 "type": "log",
                 "service": service_name,
