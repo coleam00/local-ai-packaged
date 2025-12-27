@@ -1,16 +1,19 @@
 import { create } from 'zustand';
 import { servicesApi } from '../api/services';
+import { setupApi } from '../api/setup';
 import type { ServiceInfo, ServiceGroup, ServiceActionRequest } from '../types/service';
 
 interface ServicesState {
   services: ServiceInfo[];
   groups: ServiceGroup[];
+  enabledServices: string[] | null; // null means show all (no stack config)
   isLoading: boolean;
   error: string | null;
   actionInProgress: string | null; // service name being acted upon
 
   fetchServices: () => Promise<void>;
   fetchGroups: () => Promise<void>;
+  fetchEnabledServices: () => Promise<void>;
   startService: (name: string, options?: ServiceActionRequest) => Promise<boolean>;
   stopService: (name: string, options?: ServiceActionRequest) => Promise<boolean>;
   restartService: (name: string, options?: ServiceActionRequest) => Promise<boolean>;
@@ -22,6 +25,7 @@ interface ServicesState {
 export const useServicesStore = create<ServicesState>((set, get) => ({
   services: [],
   groups: [],
+  enabledServices: null,
   isLoading: false,
   error: null,
   actionInProgress: null,
@@ -46,6 +50,20 @@ export const useServicesStore = create<ServicesState>((set, get) => ({
       set({ groups: response.groups });
     } catch (error: unknown) {
       console.error('Failed to fetch groups:', error);
+    }
+  },
+
+  fetchEnabledServices: async () => {
+    try {
+      const config = await setupApi.getStackConfig();
+      if (config && config.enabled_services) {
+        set({ enabledServices: config.enabled_services });
+      } else {
+        set({ enabledServices: null });
+      }
+    } catch (error: unknown) {
+      console.error('Failed to fetch enabled services:', error);
+      set({ enabledServices: null });
     }
   },
 

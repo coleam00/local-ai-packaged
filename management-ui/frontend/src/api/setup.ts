@@ -30,13 +30,30 @@ export interface SetupStatus {
   supabase_cloned: boolean;
   services_running: number;
   stack_running: boolean;
+  stack_configured: boolean;
   missing_secrets: string[];
+}
+
+export interface StackConfig {
+  profile: string;
+  environment: string;
+  enabled_services: string[];
+  setup_completed: boolean;
 }
 
 export const setupApi = {
   async getStatus(): Promise<SetupStatus> {
     const response = await apiClient.get<SetupStatus>('/setup/status');
     return response.data;
+  },
+
+  async getStackConfig(): Promise<StackConfig | null> {
+    try {
+      const response = await apiClient.get<StackConfig>('/setup/stack-config');
+      return response.data;
+    } catch {
+      return null;
+    }
   },
 
   async getServices(profile: string): Promise<ServiceInfo[]> {

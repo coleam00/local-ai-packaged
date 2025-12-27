@@ -35,13 +35,12 @@ export const ServicesStep: React.FC<ServicesStepProps> = ({ profile, value, onCh
         const data = await setupApi.getServices(profile);
         setServices(data);
 
-        // Auto-select defaults if nothing selected
-        if (value.length === 0) {
-          const defaults = data
-            .filter(s => s.default_enabled && s.available_for_profile && !s.required)
-            .map(s => s.name);
-          onChange(defaults);
-        }
+        // Always reset selection when profile changes
+        // Only select services that are available for this profile
+        const defaults = data
+          .filter(s => s.default_enabled && s.available_for_profile && !s.required)
+          .map(s => s.name);
+        onChange(defaults);
       } catch (error) {
         console.error('Failed to fetch services:', error);
       } finally {

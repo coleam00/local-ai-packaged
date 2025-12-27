@@ -9,11 +9,13 @@ export const Services: React.FC = () => {
   const {
     services,
     groups,
+    enabledServices,
     isLoading,
     error,
     actionInProgress,
     fetchServices,
     fetchGroups,
+    fetchEnabledServices,
     startService,
     stopService,
     restartService,
@@ -28,6 +30,7 @@ export const Services: React.FC = () => {
   useEffect(() => {
     fetchServices();
     fetchGroups();
+    fetchEnabledServices();
 
     // Poll for updates every 5 seconds
     const interval = setInterval(() => {
@@ -35,19 +38,31 @@ export const Services: React.FC = () => {
       fetchGroups();
     }, 5000);
     return () => clearInterval(interval);
-  }, [fetchServices, fetchGroups]);
+  }, [fetchServices, fetchGroups, fetchEnabledServices]);
 
-  // Filter services by search query
+  // Filter services by enabled services and search query
   const filteredServices = useMemo(() => {
-    if (!searchQuery) return services;
-    const query = searchQuery.toLowerCase();
-    return services.filter(
-      (service) =>
-        service.name.toLowerCase().includes(query) ||
-        service.image?.toLowerCase().includes(query) ||
-        service.group.toLowerCase().includes(query)
-    );
-  }, [services, searchQuery]);
+    // First filter by enabled services (if configured)
+    let filtered = services;
+    if (enabledServices !== null && enabledServices.length > 0) {
+      filtered = services.filter(
+        (service) => enabledServices.includes(service.name)
+      );
+    }
+
+    // Then filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (service) =>
+          service.name.toLowerCase().includes(query) ||
+          service.image?.toLowerCase().includes(query) ||
+          service.group.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [services, enabledServices, searchQuery]);
 
   // Group services by their group property
   const groupedServices = useMemo(() => {

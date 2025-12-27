@@ -13,7 +13,7 @@ import { SetupWizardPage } from './pages/SetupWizardPage';
 import { Loading } from './components/common/Loading';
 
 const App: React.FC = () => {
-  const { checkAuth, checkSetupStatus, isLoading, setupRequired, stackRunning } = useAuthStore();
+  const { checkAuth, checkSetupStatus, isLoading, setupRequired, stackConfigured } = useAuthStore();
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
@@ -31,7 +31,9 @@ const App: React.FC = () => {
     return <Loading message="Initializing..." />;
   }
 
-  if (setupRequired && !stackRunning) {
+  // Show setup wizard if admin user exists but no stack is configured
+  // OR if setup is required (no .env, no secrets, etc.)
+  if (setupRequired && !stackConfigured) {
     return (
       <BrowserRouter>
         <Routes>

@@ -11,6 +11,7 @@ interface AuthState {
   error: string | null;
   setupRequired: boolean;
   stackRunning: boolean;
+  stackConfigured: boolean;
 
   checkAuth: () => Promise<void>;
   checkSetupStatus: () => Promise<boolean>;
@@ -27,6 +28,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   error: null,
   setupRequired: false,
   stackRunning: false,
+  stackConfigured: false,
 
   checkAuth: async () => {
     const token = getAuthToken();
@@ -49,9 +51,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       const status = await authApi.getSetupStatus();
       // Also check stack status
       let stackRunning = false;
+      let stackConfigured = false;
       try {
         const stackStatus = await setupApi.getStatus();
         stackRunning = stackStatus.stack_running;
+        stackConfigured = stackStatus.stack_configured;
       } catch {
         // Ignore errors - stack might not be reachable
       }
@@ -59,6 +63,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({
         setupRequired: status.setup_required,
         stackRunning,
+        stackConfigured,
         isLoading: false
       });
       return status.setup_required;

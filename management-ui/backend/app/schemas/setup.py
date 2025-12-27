@@ -22,6 +22,7 @@ class SetupStatusResponse(BaseModel):
     supabase_cloned: bool
     services_running: int
     stack_running: bool = False  # True if any core services are running
+    stack_configured: bool = False  # True if user has configured their stack
     missing_secrets: List[str]
 
 
@@ -69,3 +70,13 @@ class ServiceSelectionValidation(BaseModel):
     warnings: List[str]
     auto_enabled: Dict[str, Dict]  # {service: {reason, required_by}}
     total_services: int
+
+
+class StackConfigResponse(BaseModel):
+    profile: str
+    environment: str
+    enabled_services: List[str]
+    setup_completed: bool
+
+    class Config:
+        from_attributes = True
