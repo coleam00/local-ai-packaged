@@ -9,6 +9,7 @@ import { Services } from './pages/Services';
 import { Dependencies } from './pages/Dependencies';
 import { Configuration } from './pages/Configuration';
 import { Logs } from './pages/Logs';
+import { Health } from './pages/Health';
 import { SetupWizardPage } from './pages/SetupWizardPage';
 import { Loading } from './components/common/Loading';
 
@@ -63,6 +64,7 @@ const App: React.FC = () => {
           <Route path="/dependencies" element={<Dependencies />} />
           <Route path="/config" element={<Configuration />} />
           <Route path="/logs" element={<Logs />} />
+          <Route path="/health" element={<Health />} />
           <Route path="/setup-wizard" element={<SetupWizardPage />} />
           <Route path="/settings" element={<div className="text-gray-400">Settings (Coming Soon)</div>} />
         </Route>

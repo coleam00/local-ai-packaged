@@ -94,3 +94,48 @@ export function createStatusWebSocket(
 
   return ws;
 }
+
+export interface MetricsMessage {
+  type: 'metrics' | 'error';
+  timestamp?: string;
+  data?: Record<string, unknown>;
+  message?: string;
+}
+
+export function createMetricsWebSocket(
+  onMessage: (msg: MetricsMessage) => void,
+  onError?: (error: Event) => void,
+  onClose?: () => void,
+  serviceName?: string,
+  interval: number = 2
+): WebSocket | null {
+  const token = getAuthToken();
+  if (!token) return null;
+
+  const baseUrl = getWsBaseUrl();
+  const path = serviceName ? `/metrics/ws/${serviceName}` : '/metrics/ws';
+  const url = `${baseUrl}/api${path}?token=${token}&interval=${interval}`;
+
+  console.debug('Metrics WebSocket connecting to:', url);
+  const ws = new WebSocket(url);
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      onMessage(data);
+    } catch {
+      console.error('Failed to parse metrics message');
+    }
+  };
+
+  ws.onerror = (error) => {
+    console.error('Metrics WebSocket error:', error);
+    onError?.(error);
+  };
+
+  ws.onclose = () => {
+    onClose?.();
+  };
+
+  return ws;
+}

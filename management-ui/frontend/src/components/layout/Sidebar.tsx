@@ -7,6 +7,7 @@ import {
   ScrollText,
   Wand2,
   Box,
+  Activity,
 } from 'lucide-react';
 
 const navItems = [
@@ -15,6 +16,7 @@ const navItems = [
   { path: '/dependencies', label: 'Dependencies', icon: GitBranch },
   { path: '/config', label: 'Configuration', icon: Settings },
   { path: '/logs', label: 'Logs', icon: ScrollText },
+  { path: '/health', label: 'Health', icon: Activity },
   { path: '/setup-wizard', label: 'Setup Wizard', icon: Wand2 },
 ];
 
