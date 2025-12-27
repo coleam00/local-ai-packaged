@@ -6,3 +6,7 @@ shared-backup/
 .env.test
 searxng/settings.yml
 searxng/uwsgi*
+.venv
+nul
+.claude
+.agents/plans/completed/

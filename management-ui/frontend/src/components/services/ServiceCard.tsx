@@ -24,20 +24,24 @@ export function ServiceCard({
 
   return (
     <div
-      className={`bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors ${
-        onClick ? 'cursor-pointer' : ''
+      className={`bg-[#1e293b] rounded-[12px] p-4 border border-[#374151]
+                  hover:border-[#4b5563] transition-all duration-200 ${
+        onClick ? 'cursor-pointer hover:translate-y-[-2px]' : ''
       }`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-gray-700 rounded-lg">
+          <div className="p-2 bg-[#374151] rounded-lg">
             <Box className="w-5 h-5 text-blue-400" />
           </div>
           <div>
             <h3 className="font-medium text-white">{service.name}</h3>
             {service.image && (
-              <p className="text-xs text-gray-400 truncate max-w-[200px]" title={service.image}>
+              <p
+                className="text-xs text-slate-500 truncate max-w-[180px]"
+                title={service.image}
+              >
                 {service.image}
               </p>
             )}
@@ -70,7 +74,9 @@ export function ServiceCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded text-gray-300 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs
+                             bg-[#374151] hover:bg-[#4b5563] rounded
+                             text-slate-400 hover:text-white transition-colors"
                   title={`Open port ${hostPort}`}
                 >
                   :{hostPort}
@@ -79,7 +85,9 @@ export function ServiceCard({
               );
             })}
             {service.ports.length > 2 && (
-              <span className="text-xs text-gray-500">+{service.ports.length - 2}</span>
+              <span className="text-xs text-slate-500">
+                +{service.ports.length - 2}
+              </span>
             )}
           </div>
         )}

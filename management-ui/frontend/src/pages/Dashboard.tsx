@@ -1,9 +1,34 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Heart, Settings, ArrowRight, Box, RefreshCw } from 'lucide-react';
+import { Box, Heart, Activity, ArrowRight, Settings, RefreshCw } from 'lucide-react';
 import { Card } from '../components/common/Card';
 import { useServicesStore } from '../store/servicesStore';
 import { ServiceCard } from '../components/services';
+
+// Progress Bar Component
+interface ProgressBarProps {
+  value: number;
+  max: number;
+  color: 'blue' | 'green' | 'purple';
+}
+
+const ProgressBar: React.FC<ProgressBarProps> = ({ value, max, color }) => {
+  const percentage = max > 0 ? (value / max) * 100 : 0;
+  const colorClass = {
+    blue: 'bg-blue-500',
+    green: 'bg-emerald-500',
+    purple: 'bg-purple-500',
+  }[color];
+
+  return (
+    <div className="h-2 bg-[#374151] rounded-full overflow-hidden">
+      <div
+        className={`h-full rounded-full transition-all duration-500 ease-out ${colorClass}`}
+        style={{ width: `${percentage}%` }}
+      />
+    </div>
+  );
+};
 
 export const Dashboard: React.FC = () => {
   const {
@@ -42,53 +67,66 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+          <p className="text-sm text-slate-400 mt-1">
+            Monitor and manage your LocalAI stack
+          </p>
+        </div>
         <button
           onClick={() => fetchServices()}
           disabled={isLoading}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-sm text-slate-400
+                     hover:text-white hover:bg-[#1e293b] rounded-lg transition-colors
+                     border border-[#374151] hover:border-[#4b5563]"
         >
-          <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
         </button>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <div className="flex items-center gap-4">
+        {/* Services Card */}
+        <Card variant="blue">
+          <div className="flex items-center gap-4 mb-4">
             <div className="p-3 bg-blue-500/20 rounded-lg">
               <Box className="w-6 h-6 text-blue-400" />
             </div>
-            <div>
-              <p className="text-sm text-gray-400">Services</p>
+            <div className="flex-1">
+              <p className="text-sm text-slate-400">Services</p>
               <p className="text-2xl font-bold text-white">
                 {runningCount} / {totalCount}
               </p>
-              <p className="text-xs text-gray-500">Running / Total</p>
             </div>
           </div>
+          <ProgressBar value={runningCount} max={totalCount} color="blue" />
+          <p className="text-xs text-slate-500 mt-2">Running / Total</p>
         </Card>
 
-        <Card>
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-green-500/20 rounded-lg">
-              <Heart className="w-6 h-6 text-green-400" />
+        {/* Health Card */}
+        <Card variant="green">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-emerald-500/20 rounded-lg">
+              <Heart className="w-6 h-6 text-emerald-400" />
             </div>
-            <div>
-              <p className="text-sm text-gray-400">Health</p>
+            <div className="flex-1">
+              <p className="text-sm text-slate-400">Health</p>
               <p className="text-2xl font-bold text-white">{healthyCount}</p>
-              <p className="text-xs text-gray-500">Healthy Services</p>
             </div>
           </div>
+          <ProgressBar value={healthyCount} max={runningCount || 1} color="green" />
+          <p className="text-xs text-slate-500 mt-2">Healthy Services</p>
         </Card>
 
-        <Card>
-          <div className="flex items-center gap-4">
+        {/* System Status Card */}
+        <Card variant="purple">
+          <div className="flex items-center gap-4 mb-4">
             <div className="p-3 bg-purple-500/20 rounded-lg">
               <Activity className="w-6 h-6 text-purple-400" />
             </div>
-            <div>
-              <p className="text-sm text-gray-400">Status</p>
+            <div className="flex-1">
+              <p className="text-sm text-slate-400">System Status</p>
               <p className="text-2xl font-bold text-white">
                 {runningCount === totalCount
                   ? 'All Running'
@@ -96,9 +134,18 @@ export const Dashboard: React.FC = () => {
                   ? 'All Stopped'
                   : 'Partial'}
               </p>
-              <p className="text-xs text-gray-500">System Status</p>
             </div>
           </div>
+          <ProgressBar
+            value={runningCount}
+            max={totalCount}
+            color="purple"
+          />
+          <p className="text-xs text-slate-500 mt-2">
+            {totalCount > 0
+              ? `${Math.round((runningCount / totalCount) * 100)}% operational`
+              : 'No services configured'}
+          </p>
         </Card>
       </div>
 
@@ -117,8 +164,15 @@ export const Dashboard: React.FC = () => {
 
         {services.length === 0 ? (
           <Card>
-            <p className="text-gray-400 text-center py-4">
-              {isLoading ? 'Loading services...' : 'No services found'}
+            <p className="text-slate-400 text-center py-8">
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Loading services...
+                </span>
+              ) : (
+                'No services found'
+              )}
             </p>
           </Card>
         ) : (
@@ -142,31 +196,35 @@ export const Dashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link to="/services">
-            <Card className="hover:border-blue-500/50 transition-colors cursor-pointer">
+            <Card className="hover:border-blue-500/50 transition-all hover:translate-y-[-2px]">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-blue-500/20 rounded-lg">
                   <Box className="w-6 h-6 text-blue-400" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-white">Manage Services</p>
-                  <p className="text-sm text-gray-400">Start, stop, and restart services</p>
+                  <p className="text-sm text-slate-400">
+                    Start, stop, and restart services
+                  </p>
                 </div>
-                <ArrowRight className="w-5 h-5 text-gray-400 ml-auto" />
+                <ArrowRight className="w-5 h-5 text-slate-500" />
               </div>
             </Card>
           </Link>
 
-          <Link to="/settings">
-            <Card className="hover:border-blue-500/50 transition-colors cursor-pointer">
+          <Link to="/config">
+            <Card className="hover:border-amber-500/50 transition-all hover:translate-y-[-2px]">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-yellow-500/20 rounded-lg">
-                  <Settings className="w-6 h-6 text-yellow-400" />
+                <div className="p-3 bg-amber-500/20 rounded-lg">
+                  <Settings className="w-6 h-6 text-amber-400" />
                 </div>
-                <div>
-                  <p className="font-medium text-white">Settings</p>
-                  <p className="text-sm text-gray-400">Configure environment variables</p>
+                <div className="flex-1">
+                  <p className="font-medium text-white">Configuration</p>
+                  <p className="text-sm text-slate-400">
+                    Configure environment variables
+                  </p>
                 </div>
-                <ArrowRight className="w-5 h-5 text-gray-400 ml-auto" />
+                <ArrowRight className="w-5 h-5 text-slate-500" />
               </div>
             </Card>
           </Link>

@@ -6,22 +6,76 @@ interface StatusBadgeProps {
   showHealth?: boolean;
 }
 
-const statusConfig: Record<ServiceStatus, { label: string; color: string }> = {
-  running: { label: 'Running', color: 'bg-green-500' },
-  stopped: { label: 'Stopped', color: 'bg-gray-500' },
-  starting: { label: 'Starting', color: 'bg-yellow-500' },
-  stopping: { label: 'Stopping', color: 'bg-yellow-500' },
-  restarting: { label: 'Restarting', color: 'bg-yellow-500' },
-  error: { label: 'Error', color: 'bg-red-500' },
-  not_created: { label: 'Not Created', color: 'bg-gray-400' },
+const statusConfig: Record<
+  ServiceStatus,
+  { label: string; bgClass: string; textClass: string }
+> = {
+  running: {
+    label: 'Running',
+    bgClass: 'bg-[#1e40af]',
+    textClass: 'text-[#dbeafe]',
+  },
+  stopped: {
+    label: 'Stopped',
+    bgClass: 'bg-slate-600',
+    textClass: 'text-slate-300',
+  },
+  starting: {
+    label: 'Starting',
+    bgClass: 'bg-amber-600',
+    textClass: 'text-amber-100',
+  },
+  stopping: {
+    label: 'Stopping',
+    bgClass: 'bg-amber-600',
+    textClass: 'text-amber-100',
+  },
+  restarting: {
+    label: 'Restarting',
+    bgClass: 'bg-amber-600',
+    textClass: 'text-amber-100',
+  },
+  error: {
+    label: 'Error',
+    bgClass: 'bg-red-900',
+    textClass: 'text-red-200',
+  },
+  not_created: {
+    label: 'Not Created',
+    bgClass: 'bg-slate-700',
+    textClass: 'text-slate-400',
+  },
 };
 
-const healthConfig: Record<HealthStatus, { label: string; color: string }> = {
-  healthy: { label: 'Healthy', color: 'bg-green-400' },
-  unhealthy: { label: 'Unhealthy', color: 'bg-red-400' },
-  starting: { label: 'Starting', color: 'bg-yellow-400' },
-  none: { label: 'No Check', color: 'bg-gray-400' },
-  unknown: { label: 'Unknown', color: 'bg-gray-400' },
+const healthConfig: Record<
+  HealthStatus,
+  { label: string; bgClass: string; textClass: string }
+> = {
+  healthy: {
+    label: 'Healthy',
+    bgClass: 'bg-[#065f46]',
+    textClass: 'text-[#d1fae5]',
+  },
+  unhealthy: {
+    label: 'Unhealthy',
+    bgClass: 'bg-red-900',
+    textClass: 'text-red-200',
+  },
+  starting: {
+    label: 'Starting',
+    bgClass: 'bg-amber-700',
+    textClass: 'text-amber-100',
+  },
+  none: {
+    label: 'No Check',
+    bgClass: 'bg-slate-700',
+    textClass: 'text-slate-400',
+  },
+  unknown: {
+    label: 'Unknown',
+    bgClass: 'bg-slate-700',
+    textClass: 'text-slate-400',
+  },
 };
 
 export function StatusBadge({ status, health, showHealth = true }: StatusBadgeProps) {
@@ -31,18 +85,20 @@ export function StatusBadge({ status, health, showHealth = true }: StatusBadgePr
   return (
     <div className="flex items-center gap-2">
       <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${statusCfg.color}`}
+        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusCfg.bgClass} ${statusCfg.textClass}`}
       >
         <span
-          className={`w-2 h-2 mr-1.5 rounded-full ${
-            status === 'running' ? 'animate-pulse bg-white' : 'bg-white/50'
+          className={`w-1.5 h-1.5 mr-1.5 rounded-full ${
+            status === 'running'
+              ? 'animate-pulse bg-blue-300'
+              : 'bg-current opacity-50'
           }`}
         />
         {statusCfg.label}
       </span>
       {showHealth && healthCfg && health !== 'none' && (
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-white ${healthCfg.color}`}
+          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${healthCfg.bgClass} ${healthCfg.textClass}`}
         >
           {healthCfg.label}
         </span>

@@ -3,8 +3,9 @@ import { configApi } from '../api/config';
 import type { ConfigSchema, ValidationError, BackupInfo } from '../types/config';
 
 interface ConfigState {
-  config: Record<string, string>;
-  editedConfig: Record<string, string>;
+  config: Record<string, string>; // Masked config for display
+  rawConfig: Record<string, string>; // Raw config with actual values
+  editedConfig: Record<string, string>; // Edited values (starts with raw)
   schema: ConfigSchema;
   categories: Record<string, string[]>;
   validationErrors: ValidationError[];
@@ -13,9 +14,9 @@ interface ConfigState {
   isSaving: boolean;
   error: string | null;
   hasChanges: boolean;
+  changedFields: Set<string>; // Track which fields were actually modified
 
   fetchConfig: () => Promise<void>;
-  fetchRawConfig: () => Promise<void>;
   updateField: (key: string, value: string) => void;
   saveConfig: () => Promise<boolean>;
   validateConfig: () => Promise<boolean>;
@@ -29,6 +30,7 @@ interface ConfigState {
 
 export const useConfigStore = create<ConfigState>((set, get) => ({
   config: {},
+  rawConfig: {},
   editedConfig: {},
   schema: {},
   categories: {},
@@ -38,19 +40,27 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   isSaving: false,
   error: null,
   hasChanges: false,
+  changedFields: new Set(),
 
   fetchConfig: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await configApi.get();
+      // Fetch both masked and raw configs
+      const [maskedResponse, rawConfig] = await Promise.all([
+        configApi.get(),
+        configApi.getRaw(),
+      ]);
+
       set({
-        config: response.config,
-        editedConfig: { ...response.config },
-        schema: response.schema_info,
-        categories: response.categories,
-        validationErrors: response.validation_errors,
+        config: maskedResponse.config,
+        rawConfig: rawConfig,
+        editedConfig: { ...rawConfig }, // Edit the raw values, not masked
+        schema: maskedResponse.schema_info,
+        categories: maskedResponse.categories,
+        validationErrors: maskedResponse.validation_errors,
         isLoading: false,
         hasChanges: false,
+        changedFields: new Set(),
       });
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } } };
@@ -61,25 +71,24 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     }
   },
 
-  fetchRawConfig: async () => {
-    try {
-      const rawConfig = await configApi.getRaw();
-      set({
-        config: rawConfig,
-        editedConfig: { ...rawConfig },
-        hasChanges: false,
-      });
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { detail?: string } } };
-      set({ error: err.response?.data?.detail || 'Failed to fetch raw configuration' });
-    }
-  },
-
   updateField: (key: string, value: string) => {
-    const { editedConfig, config } = get();
+    const { editedConfig, rawConfig, changedFields } = get();
     const newConfig = { ...editedConfig, [key]: value };
-    const hasChanges = JSON.stringify(newConfig) !== JSON.stringify(config);
-    set({ editedConfig: newConfig, hasChanges });
+
+    // Track which fields have been modified
+    const newChangedFields = new Set(changedFields);
+    if (value !== rawConfig[key]) {
+      newChangedFields.add(key);
+    } else {
+      newChangedFields.delete(key);
+    }
+
+    const hasChanges = newChangedFields.size > 0;
+    set({
+      editedConfig: newConfig,
+      hasChanges,
+      changedFields: newChangedFields,
+    });
   },
 
   saveConfig: async () => {
@@ -87,11 +96,19 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     set({ isSaving: true, error: null });
     try {
       await configApi.update(editedConfig);
+
+      // After save, update rawConfig to match editedConfig
       set({
-        config: { ...editedConfig },
+        rawConfig: { ...editedConfig },
+        config: { ...editedConfig }, // Will be refreshed on next fetch
         isSaving: false,
         hasChanges: false,
+        changedFields: new Set(),
       });
+
+      // Refresh to get properly masked display values
+      get().fetchConfig();
+
       return true;
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } } };
@@ -126,9 +143,22 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   applyGeneratedSecrets: (secrets: Record<string, string>) => {
-    const { editedConfig } = get();
+    const { editedConfig, rawConfig, changedFields } = get();
     const newConfig = { ...editedConfig, ...secrets };
-    set({ editedConfig: newConfig, hasChanges: true });
+
+    // Mark all generated secrets as changed
+    const newChangedFields = new Set(changedFields);
+    for (const key of Object.keys(secrets)) {
+      if (secrets[key] !== rawConfig[key]) {
+        newChangedFields.add(key);
+      }
+    }
+
+    set({
+      editedConfig: newConfig,
+      hasChanges: newChangedFields.size > 0,
+      changedFields: newChangedFields,
+    });
   },
 
   fetchBackups: async () => {
@@ -153,8 +183,12 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   resetChanges: () => {
-    const { config } = get();
-    set({ editedConfig: { ...config }, hasChanges: false });
+    const { rawConfig } = get();
+    set({
+      editedConfig: { ...rawConfig },
+      hasChanges: false,
+      changedFields: new Set(),
+    });
   },
 
   clearError: () => set({ error: null }),

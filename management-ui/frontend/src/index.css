@@ -1,33 +1,113 @@
 @import "tailwindcss";
 
+/* Design System: LocalAI Stack Manager - Dark Theme */
+/* Primary Background: #121827 (deep dark blue-charcoal) */
+/* Secondary Background: #1e293b (cards/containers) */
+/* Input Background: #2d3748 */
+
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-[#121827] text-white font-sans;
 }
 
+/* Card Component */
+.card {
+  @apply bg-[#1e293b] rounded-[12px] border border-[#374151] p-4;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Button Base */
 .btn {
   @apply px-4 py-2 rounded-md font-medium transition-colors;
 }
 
 .btn-primary {
-  @apply bg-blue-600 text-white hover:bg-blue-700;
+  @apply bg-blue-500 text-white hover:bg-blue-600;
 }
 
 .btn-secondary {
-  @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+  @apply bg-[#2d3748] text-gray-100 hover:bg-[#374151];
 }
 
 .btn-danger {
   @apply bg-red-600 text-white hover:bg-red-700;
 }
 
-.card {
-  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4;
-}
-
+/* Input Component */
 .input {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  @apply w-full px-3 py-2 bg-[#2d3748] border border-[#374151] rounded-md
+         text-white placeholder-slate-500
+         focus:ring-2 focus:ring-blue-500 focus:border-transparent
+         transition-colors;
 }
 
+.input:focus {
+  @apply outline-none;
+}
+
+/* Label */
 .label {
-  @apply block text-sm font-medium text-gray-700 mb-1;
+  @apply block text-sm font-medium text-slate-400 mb-1;
+}
+
+/* Progress Bar */
+.progress-bar {
+  @apply h-2 bg-[#374151] rounded-full overflow-hidden;
+}
+
+.progress-bar-fill {
+  @apply h-full rounded-full transition-all duration-300 ease-out;
+}
+
+.progress-bar-blue {
+  @apply bg-blue-500;
+}
+
+.progress-bar-green {
+  @apply bg-emerald-500;
+}
+
+.progress-bar-purple {
+  @apply bg-purple-500;
+}
+
+/* Status Badge */
+.status-badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+}
+
+.status-badge-running {
+  @apply bg-[#1e40af] text-[#dbeafe];
+}
+
+.status-badge-healthy {
+  @apply bg-[#065f46] text-[#d1fae5];
+}
+
+.status-badge-stopped {
+  @apply bg-slate-600 text-slate-300;
+}
+
+.status-badge-error {
+  @apply bg-red-900 text-red-200;
+}
+
+.status-badge-starting {
+  @apply bg-amber-600 text-amber-100;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  @apply w-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-[#1e293b];
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-[#374151] rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-500;
 }

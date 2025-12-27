@@ -17,11 +17,11 @@ export const MainLayout: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-[#121827]">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header />
-        <main className="flex-1 p-6 bg-gray-50">
+        <main className="flex-1 p-6 overflow-auto">
           <Outlet />
         </main>
       </div>
