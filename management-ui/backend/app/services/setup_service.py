@@ -78,8 +78,8 @@ class SetupService:
 
         services = []
         for name, svc_def in parser.services.items():
-            # Skip init containers (except n8n-import which is needed for dependency tracking)
-            if "import" in name and name != "n8n-import":
+            # Skip init containers
+            if "import" in name:
                 continue
             if "pull-llama" in name:
                 continue

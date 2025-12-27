@@ -197,21 +197,12 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
     ),
 
     # === WORKFLOW ===
-    "n8n-import": ServiceConfig(
-        name="n8n-import",
-        display_name="n8n Import",
-        description="Import default workflows (runs once)",
-        group="workflow",
-        dependencies=["db"],
-        default_enabled=True,
-        category="infrastructure"
-    ),
     "n8n": ServiceConfig(
         name="n8n",
         display_name="n8n",
         description="Workflow automation platform",
         group="workflow",
-        dependencies=["n8n-import"],
+        dependencies=["db"],
         default_enabled=True,
         category="optional"
     ),

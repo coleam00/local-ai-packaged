@@ -22,7 +22,7 @@ SERVICE_GROUPS = {
     },
     "workflow": {
         "name": "Workflow",
-        "services": ["n8n", "n8n-import"],
+        "services": ["n8n"],
         "description": "Workflow automation"
     },
     "database": {
