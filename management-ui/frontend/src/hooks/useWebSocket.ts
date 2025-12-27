@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { createLogWebSocket } from '../api/websocket';
 import type { LogMessage } from '../api/websocket';
 
@@ -23,10 +23,8 @@ const initialState: LogStreamState = {
 export function useLogStream({ serviceName, tail = 100, enabled = true }: UseLogStreamOptions) {
   const [state, setState] = useState<LogStreamState>(initialState);
   const wsRef = useRef<WebSocket | null>(null);
-
-  // Create a stable key for the current connection
-  const connectionKey = useMemo(() => `${serviceName}-${tail}`, [serviceName, tail]);
-  const prevKeyRef = useRef<string>(connectionKey);
+  const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentServiceRef = useRef<string | null>(null);
 
   const clearLogs = useCallback(() => {
     setState((prev) => ({ ...prev, logs: [] }));
@@ -34,63 +32,80 @@ export function useLogStream({ serviceName, tail = 100, enabled = true }: UseLog
 
   // WebSocket connection effect
   useEffect(() => {
-    // Check if connection params changed - reset state for new connection
-    const keyChanged = prevKeyRef.current !== connectionKey;
-    prevKeyRef.current = connectionKey;
+    // Clear any pending connection timeout
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current);
+      connectTimeoutRef.current = null;
+    }
+
+    // Close existing connection if service changed
+    if (wsRef.current && currentServiceRef.current !== serviceName) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
 
     if (!serviceName || !enabled) {
-      if (keyChanged) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset on service change
-        setState(initialState);
-      }
+      setState(initialState);
+      currentServiceRef.current = null;
       return;
     }
 
-    // Reset state for new connection
-    if (keyChanged) {
+    // Reset state for new service
+    if (currentServiceRef.current !== serviceName) {
       setState(initialState);
+      currentServiceRef.current = serviceName;
     }
 
-    const ws = createLogWebSocket(
-      serviceName,
-      (msg: LogMessage) => {
-        if (msg.type === 'log' && msg.content) {
-          setState((prev) => ({
-            ...prev,
-            logs: [...prev.logs, msg.content!].slice(-5000),
-          }));
-        } else if (msg.type === 'error') {
-          setState((prev) => ({
-            ...prev,
-            error: msg.message || 'Unknown error',
-          }));
-        }
-      },
-      () => {
-        setState((prev) => ({
-          ...prev,
-          error: 'WebSocket connection error',
-          isConnected: false,
-        }));
-      },
-      () => {
-        setState((prev) => ({ ...prev, isConnected: false }));
-      },
-      tail
-    );
+    // Debounce connection to avoid rapid reconnects
+    connectTimeoutRef.current = setTimeout(() => {
+      // Don't reconnect if service changed during timeout
+      if (currentServiceRef.current !== serviceName) return;
 
-    if (ws) {
-      wsRef.current = ws;
-      ws.onopen = () => setState((prev) => ({ ...prev, isConnected: true }));
-    }
+      const ws = createLogWebSocket(
+        serviceName,
+        (msg: LogMessage) => {
+          if (msg.type === 'log' && msg.content) {
+            setState((prev) => ({
+              ...prev,
+              logs: [...prev.logs, msg.content!].slice(-5000),
+            }));
+          } else if (msg.type === 'error') {
+            setState((prev) => ({
+              ...prev,
+              error: msg.message || 'Unknown error',
+            }));
+          }
+        },
+        () => {
+          setState((prev) => ({
+            ...prev,
+            error: 'WebSocket connection error',
+            isConnected: false,
+          }));
+        },
+        () => {
+          setState((prev) => ({ ...prev, isConnected: false }));
+        },
+        tail
+      );
+
+      if (ws) {
+        wsRef.current = ws;
+        ws.onopen = () => setState((prev) => ({ ...prev, isConnected: true, error: null }));
+      }
+    }, 100); // 100ms debounce
 
     return () => {
+      if (connectTimeoutRef.current) {
+        clearTimeout(connectTimeoutRef.current);
+        connectTimeoutRef.current = null;
+      }
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
       }
     };
-  }, [serviceName, tail, enabled, connectionKey]);
+  }, [serviceName, tail, enabled]);
 
   return { ...state, clearLogs };
 }
