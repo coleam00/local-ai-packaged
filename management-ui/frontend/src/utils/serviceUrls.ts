@@ -1,6 +1,6 @@
 /**
- * Service URL mapping - maps service names to their Caddy proxy ports
- * These are the default ports when running in "private" mode
+ * Service URL mapping - maps service names to their exposed ports
+ * These are the ports from docker-compose.override.private.yml
  */
 
 interface ServiceUrlConfig {
@@ -10,22 +10,22 @@ interface ServiceUrlConfig {
 }
 
 const SERVICE_URL_MAP: Record<string, ServiceUrlConfig> = {
-  // Main services via Caddy
-  'n8n': { port: 8001, name: 'n8n' },
-  'open-webui': { port: 8002, name: 'Open WebUI' },
-  'flowise': { port: 8003, name: 'Flowise' },
-  'ollama': { port: 8004, name: 'Ollama API' },
-  'ollama-cpu': { port: 8004, name: 'Ollama API' },
-  'ollama-gpu': { port: 8004, name: 'Ollama API' },
-  'ollama-gpu-amd': { port: 8004, name: 'Ollama API' },
+  // Direct port access (from docker-compose.override.private.yml)
+  'n8n': { port: 5678, name: 'n8n' },
+  'open-webui': { port: 8080, name: 'Open WebUI' },
+  'flowise': { port: 3001, name: 'Flowise' },
+  'ollama': { port: 11434, name: 'Ollama API' },
+  'ollama-cpu': { port: 11434, name: 'Ollama API' },
+  'ollama-gpu': { port: 11434, name: 'Ollama API' },
+  'ollama-gpu-amd': { port: 11434, name: 'Ollama API' },
+  'langfuse-web': { port: 3000, name: 'Langfuse' },
+  'neo4j': { port: 7474, name: 'Neo4j Browser' },
+  'searxng': { port: 8081, name: 'SearXNG' },
+  'qdrant': { port: 6333, path: '/dashboard', name: 'Qdrant Dashboard' },
+
+  // Supabase services (via Kong gateway on Caddy port 8005)
   'kong': { port: 8005, name: 'Supabase API' },
   'studio': { port: 8005, path: '/project/default', name: 'Supabase Studio' },
-  'searxng': { port: 8006, name: 'SearXNG' },
-  'langfuse-web': { port: 8007, name: 'Langfuse' },
-  'neo4j': { port: 8008, name: 'Neo4j Browser' },
-
-  // Direct port access (from docker-compose.override.private.yml)
-  'qdrant': { port: 6333, path: '/dashboard', name: 'Qdrant Dashboard' },
 };
 
 /**
