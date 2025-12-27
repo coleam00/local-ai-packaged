@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GitBranch, RefreshCw, AlertCircle, Box, Link2, Heart, Layers } from 'lucide-react';
 import { DependencyGraph } from '../components/services/DependencyGraph';
@@ -11,7 +11,7 @@ import { Button } from '../components/common/Button';
 
 export const Dependencies: React.FC = () => {
   const navigate = useNavigate();
-  const { services, fetchServices } = useServicesStore();
+  const { services, enabledServices, fetchServices, fetchEnabledServices } = useServicesStore();
   const [graphData, setGraphData] = useState<DependencyGraphData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +24,7 @@ export const Dependencies: React.FC = () => {
         const [graph] = await Promise.all([
           servicesApi.getDependencies(),
           fetchServices(),
+          fetchEnabledServices(),
         ]);
         setGraphData(graph);
       } catch (e: unknown) {
@@ -34,7 +35,41 @@ export const Dependencies: React.FC = () => {
       }
     };
     loadData();
-  }, [fetchServices]);
+  }, [fetchServices, fetchEnabledServices]);
+
+  // Filter graph data by enabled services
+  const filteredGraphData = useMemo(() => {
+    if (!graphData) return null;
+
+    // If no enabled services filter is set, show all
+    if (!enabledServices || enabledServices.length === 0) {
+      return graphData;
+    }
+
+    // Filter nodes to only include enabled services
+    const filteredNodes = graphData.nodes.filter((node) =>
+      enabledServices.includes(node.id)
+    );
+    const filteredNodeIds = new Set(filteredNodes.map((n) => n.id));
+
+    // Filter edges to only include connections between enabled services
+    const filteredEdges = graphData.edges.filter(
+      (edge) => filteredNodeIds.has(edge.source) && filteredNodeIds.has(edge.target)
+    );
+
+    return {
+      nodes: filteredNodes,
+      edges: filteredEdges,
+    };
+  }, [graphData, enabledServices]);
+
+  // Filter services by enabled services
+  const filteredServices = useMemo(() => {
+    if (!enabledServices || enabledServices.length === 0) {
+      return services;
+    }
+    return services.filter((s) => enabledServices.includes(s.name));
+  }, [services, enabledServices]);
 
   const handleRefresh = async () => {
     setIsLoading(true);
@@ -43,6 +78,7 @@ export const Dependencies: React.FC = () => {
       const [graph] = await Promise.all([
         servicesApi.getDependencies(),
         fetchServices(),
+        fetchEnabledServices(),
       ]);
       setGraphData(graph);
     } catch (e: unknown) {
@@ -84,7 +120,7 @@ export const Dependencies: React.FC = () => {
     );
   }
 
-  if (!graphData || graphData.nodes.length === 0) {
+  if (!filteredGraphData || filteredGraphData.nodes.length === 0) {
     return (
       <div className="space-y-6">
         <div>
@@ -101,12 +137,12 @@ export const Dependencies: React.FC = () => {
   }
 
   const stats = {
-    total: graphData.nodes.length,
-    running: services.filter((s) => s.status === 'running').length,
-    stopped: services.filter((s) => s.status === 'stopped' || s.status === 'not_created').length,
-    dependencies: graphData.edges.length,
-    healthyDeps: graphData.edges.filter((e) => e.data.condition === 'service_healthy').length,
-    groups: new Set(graphData.nodes.map((n) => n.data.group)).size,
+    total: filteredGraphData.nodes.length,
+    running: filteredServices.filter((s) => s.status === 'running').length,
+    stopped: filteredServices.filter((s) => s.status === 'stopped' || s.status === 'not_created').length,
+    dependencies: filteredGraphData.edges.length,
+    healthyDeps: filteredGraphData.edges.filter((e) => e.data.condition === 'service_healthy').length,
+    groups: new Set(filteredGraphData.nodes.map((n) => n.data.group)).size,
   };
 
   return (
@@ -193,8 +229,8 @@ export const Dependencies: React.FC = () => {
 
       {/* Graph */}
       <DependencyGraph
-        graphData={graphData}
-        services={services}
+        graphData={filteredGraphData}
+        services={filteredServices}
         onServiceClick={handleServiceClick}
       />
 
