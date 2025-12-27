@@ -18,10 +18,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      const needsSetup = await checkSetupStatus();
-      if (!needsSetup) {
-        await checkAuth();
-      }
+      await checkSetupStatus();
+      await checkAuth();
       setInitializing(false);
     };
     init();
@@ -31,14 +29,25 @@ const App: React.FC = () => {
     return <Loading message="Initializing..." />;
   }
 
-  // Show setup wizard if admin user exists but no stack is configured
-  // OR if setup is required (no .env, no secrets, etc.)
-  if (setupRequired && !stackConfigured) {
+  // Show setup page if no admin exists
+  if (setupRequired) {
     return (
       <BrowserRouter>
         <Routes>
           <Route path="/setup" element={<Setup />} />
           <Route path="*" element={<Navigate to="/setup" replace />} />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
+  // Show setup wizard if admin exists but stack not configured
+  if (!stackConfigured) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/setup-wizard" element={<SetupWizardPage />} />
+          <Route path="*" element={<Navigate to="/setup-wizard" replace />} />
         </Routes>
       </BrowserRouter>
     );

@@ -30,7 +30,8 @@ export const Setup: React.FC = () => {
 
     try {
       await setup({ username, password, confirm_password: confirmPassword });
-      navigate('/');
+      // Navigate to setup wizard to configure the stack
+      navigate('/setup-wizard');
     } catch {
       // Error handled in store
     }
