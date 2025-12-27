@@ -23,17 +23,11 @@ export const Sidebar: React.FC = () => {
     <aside className="w-64 bg-[#1e293b] border-r border-[#374151] min-h-screen">
       {/* Logo Area */}
       <div className="p-6 border-b border-[#374151]">
-        <div className="flex items-center gap-3">
-          <img
-            src="/localai-logo-white.png"
-            alt="LocalAI"
-            className="w-10 h-10 object-contain"
-          />
-          <div>
-            <h2 className="font-semibold text-white">LocalAI Stack</h2>
-            <p className="text-xs text-slate-500">v1.0.0</p>
-          </div>
-        </div>
+        <img
+          src="/localai-logo-white.png"
+          alt="LocalAI"
+          className="h-10 object-contain"
+        />
       </div>
 
       {/* Navigation */}
@@ -64,9 +58,12 @@ export const Sidebar: React.FC = () => {
 
       {/* Footer */}
       <div className="absolute bottom-0 left-0 w-64 p-4 border-t border-[#374151]">
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          <span>System Online</span>
+        <div className="flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span>System Online</span>
+          </div>
+          <span>v1.0.0</span>
         </div>
       </div>
     </aside>
