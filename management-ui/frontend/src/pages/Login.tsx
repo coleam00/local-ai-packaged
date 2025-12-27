@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, LogIn } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -39,9 +39,11 @@ export const Login: React.FC = () => {
       <div className="relative w-full max-w-md p-8">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
-            <Box className="w-8 h-8 text-white" />
-          </div>
+          <img
+            src="/localai-logo-white.png"
+            alt="LocalAI"
+            className="w-16 h-16 object-contain mb-4"
+          />
           <h1 className="text-2xl font-bold text-white">LocalAI Stack</h1>
           <p className="text-slate-400 text-sm mt-1">Management Dashboard</p>
         </div>

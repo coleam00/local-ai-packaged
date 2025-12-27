@@ -2,11 +2,11 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Box,
   GitBranch,
   Settings,
   ScrollText,
   Wand2,
+  Box,
 } from 'lucide-react';
 
 const navItems = [
@@ -24,11 +24,13 @@ export const Sidebar: React.FC = () => {
       {/* Logo Area */}
       <div className="p-6 border-b border-[#374151]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-            <Box className="w-6 h-6 text-white" />
-          </div>
+          <img
+            src="/localai-logo-white.png"
+            alt="LocalAI"
+            className="w-10 h-10 object-contain"
+          />
           <div>
-            <h2 className="font-semibold text-white">Stack Manager</h2>
+            <h2 className="font-semibold text-white">LocalAI Stack</h2>
             <p className="text-xs text-slate-500">v1.0.0</p>
           </div>
         </div>
