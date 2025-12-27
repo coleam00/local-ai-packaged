@@ -17,6 +17,17 @@ export interface StatusMessage {
   message?: string;
 }
 
+/**
+ * Get the WebSocket base URL.
+ * In development with Vite proxy, use the same host.
+ * In production (served by backend), use the same host.
+ */
+function getWsBaseUrl(): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  return `${protocol}//${host}`;
+}
+
 export function createLogWebSocket(
   serviceName: string,
   onMessage: (msg: LogMessage) => void,
@@ -27,10 +38,10 @@ export function createLogWebSocket(
   const token = getAuthToken();
   if (!token) return null;
 
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-  const url = `${protocol}//${host}/api/logs/ws/${serviceName}?token=${token}&tail=${tail}`;
+  const baseUrl = getWsBaseUrl();
+  const url = `${baseUrl}/api/logs/ws/${serviceName}?token=${token}&tail=${tail}`;
 
+  console.debug('WebSocket connecting to:', url);
   const ws = new WebSocket(url);
 
   ws.onmessage = (event) => {
@@ -61,10 +72,10 @@ export function createStatusWebSocket(
   const token = getAuthToken();
   if (!token) return null;
 
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-  const url = `${protocol}//${host}/api/logs/ws/status?token=${token}`;
+  const baseUrl = getWsBaseUrl();
+  const url = `${baseUrl}/api/logs/ws/status?token=${token}`;
 
+  console.debug('Status WebSocket connecting to:', url);
   const ws = new WebSocket(url);
 
   ws.onmessage = (event) => {
