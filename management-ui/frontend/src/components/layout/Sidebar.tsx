@@ -22,11 +22,11 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-[#1e293b] border-r border-[#374151] min-h-screen">
       {/* Logo Area */}
-      <div className="p-6 border-b border-[#374151]">
+      <div className="p-4 border-b border-[#374151]">
         <img
           src="/localai-logo-white.png"
           alt="LocalAI"
-          className="h-10 object-contain"
+          className="w-full object-contain"
         />
       </div>
 
