@@ -181,10 +181,11 @@ export const Services: React.FC = () => {
               (s) => s.status === 'running'
             ).length;
 
-            const groupData = groupMeta || {
+            // Always use counts from filtered services, not from backend
+            const groupData = {
               id: groupId,
-              name: groupId.charAt(0).toUpperCase() + groupId.slice(1),
-              description: `${groupServices.length} services`,
+              name: groupMeta?.name || groupId.charAt(0).toUpperCase() + groupId.slice(1),
+              description: groupMeta?.description || `${groupServices.length} services`,
               services: groupServices.map((s) => s.name),
               running_count: runningCount,
               total_count: groupServices.length,
