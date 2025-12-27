@@ -9,6 +9,7 @@ import { EnvironmentStep } from './EnvironmentStep';
 import { SecretsStep } from './SecretsStep';
 import { ConfirmStep } from './ConfirmStep';
 import { apiClient } from '../../api/client';
+import { useAuthStore } from '../../store/authStore';
 import { Check, ChevronLeft, ChevronRight, Rocket, AlertCircle, Loader2 } from 'lucide-react';
 
 const STEPS = ['preflight', 'profile', 'services', 'environment', 'secrets', 'confirm'] as const;
@@ -36,6 +37,7 @@ interface SetupResult {
 
 export const SetupWizard: React.FC = () => {
   const navigate = useNavigate();
+  const { checkSetupStatus } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,8 +71,11 @@ export const SetupWizard: React.FC = () => {
       setSetupResult(response.data);
 
       if (response.data.status === 'completed') {
-        // Wait a moment then navigate
-        setTimeout(() => navigate('/'), 2000);
+        // Refresh status so App knows stack is configured, then navigate
+        setTimeout(async () => {
+          await checkSetupStatus();
+          navigate('/');
+        }, 2000);
       } else {
         setError(response.data.error || 'Setup failed');
       }
