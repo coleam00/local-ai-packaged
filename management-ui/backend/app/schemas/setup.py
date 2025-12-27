@@ -21,6 +21,7 @@ class SetupStatusResponse(BaseModel):
     has_secrets: bool
     supabase_cloned: bool
     services_running: int
+    stack_running: bool = False  # True if any core services are running
     missing_secrets: List[str]
 
 
@@ -49,9 +50,22 @@ class SetupProgressResponse(BaseModel):
 
 class ServiceSelectionInfo(BaseModel):
     name: str
+    display_name: str  # Human-readable name
     group: str
+    group_name: str  # Human-readable group name
     description: str
     required: bool
     dependencies: List[str]
+    dependency_display: List[str]  # Human-readable dependency names
     profiles: List[str]
     default_enabled: bool
+    category: str  # core, infrastructure, optional
+    available_for_profile: bool  # Whether available for selected profile
+
+
+class ServiceSelectionValidation(BaseModel):
+    valid: bool
+    errors: List[str]
+    warnings: List[str]
+    auto_enabled: Dict[str, Dict]  # {service: {reason, required_by}}
+    total_services: int

@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Body
 from ...schemas.setup import (
     SetupStatusResponse, SetupConfigRequest, SetupProgressResponse,
-    ServiceSelectionInfo
+    ServiceSelectionInfo, ServiceSelectionValidation
 )
 from ...services.setup_service import SetupService
 from ...core.secret_generator import generate_all_secrets
@@ -26,11 +26,24 @@ async def get_setup_status(
 
 @router.get("/services", response_model=List[ServiceSelectionInfo])
 async def get_available_services(
+    profile: str = "cpu",
     setup_service: SetupService = Depends(get_setup_service),
     _: dict = Depends(get_current_user)
 ):
     """Get available services for selection."""
-    return setup_service.get_available_services()
+    return setup_service.get_available_services(profile)
+
+
+@router.post("/validate-selection", response_model=ServiceSelectionValidation)
+async def validate_service_selection(
+    selected: List[str] = Body(..., embed=False),
+    profile: str = "cpu",
+    setup_service: SetupService = Depends(get_setup_service),
+    _: dict = Depends(get_current_user)
+):
+    """Validate a service selection and get auto-enabled dependencies."""
+    result = setup_service.validate_service_selection(selected, profile)
+    return ServiceSelectionValidation(**result)
 
 
 @router.post("/generate-secrets")

@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../common/Button';
 import { Card } from '../common/Card';
 import { ProfileStep } from './ProfileStep';
+import { ServicesStep } from './ServicesStep';
 import { EnvironmentStep } from './EnvironmentStep';
 import { SecretsStep } from './SecretsStep';
 import { ConfirmStep } from './ConfirmStep';
 import { apiClient } from '../../api/client';
 import { Check, ChevronLeft, ChevronRight, Rocket, AlertCircle, Loader2 } from 'lucide-react';
 
-const STEPS = ['profile', 'environment', 'secrets', 'confirm'] as const;
-const STEP_LABELS = ['Profile', 'Environment', 'Secrets', 'Confirm'];
+const STEPS = ['profile', 'services', 'environment', 'secrets', 'confirm'] as const;
+const STEP_LABELS = ['Profile', 'Services', 'Environment', 'Secrets', 'Confirm'];
 
 interface SetupConfig {
   profile: string;
@@ -81,6 +82,8 @@ export const SetupWizard: React.FC = () => {
 
   const canProceed = () => {
     switch (STEPS[currentStep]) {
+      case 'services':
+        return config.enabled_services.length > 0 || true; // Allow proceeding with defaults
       case 'secrets':
         return Object.keys(config.secrets).length > 0;
       default:
@@ -95,6 +98,14 @@ export const SetupWizard: React.FC = () => {
           <ProfileStep
             value={config.profile}
             onChange={(profile) => setConfig({ ...config, profile })}
+          />
+        );
+      case 'services':
+        return (
+          <ServicesStep
+            profile={config.profile}
+            value={config.enabled_services}
+            onChange={(enabled_services) => setConfig({ ...config, enabled_services })}
           />
         );
       case 'environment':

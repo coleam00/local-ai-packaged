@@ -1,12 +1,13 @@
 import React from 'react';
 import { Card } from '../common/Card';
-import { Settings, Globe, Key, AlertTriangle } from 'lucide-react';
+import { Settings, Globe, Key, Layers, AlertTriangle } from 'lucide-react';
 
 interface ConfirmStepProps {
   config: {
     profile: string;
     environment: string;
     secrets: Record<string, string>;
+    enabled_services: string[];
   };
 }
 
@@ -56,6 +57,21 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({ config }) => {
             <span className="ml-2 font-medium text-white">
               {Object.keys(config.secrets).length} configured
             </span>
+          </div>
+        </div>
+        <div className="flex items-start gap-3">
+          <Layers className="w-5 h-5 text-cyan-400" />
+          <div>
+            <span className="text-gray-400 text-sm">Services:</span>
+            <span className="ml-2 font-medium text-white">
+              {config.enabled_services.length} selected
+            </span>
+            {config.enabled_services.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {config.enabled_services.slice(0, 5).join(', ')}
+                {config.enabled_services.length > 5 && ` +${config.enabled_services.length - 5} more`}
+              </p>
+            )}
           </div>
         </div>
       </Card>

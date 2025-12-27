@@ -11,8 +11,9 @@ from ..core.compose_parser import ComposeParser
 from ..core.dependency_graph import DependencyGraph
 from ..schemas.setup import (
     SetupStatusResponse, SetupConfigRequest, SetupProgressResponse,
-    SetupStepResult, ServiceSelectionInfo
+    SetupStepResult, ServiceSelectionInfo, ServiceSelectionValidation
 )
+from ..core.service_dependencies import SERVICE_CONFIGS, SERVICE_GROUPS, validate_selection
 
 
 class SetupService:
@@ -47,17 +48,28 @@ class SetupService:
 
         setup_required = not has_env or len(missing_secrets) > 0 or not supabase_cloned
 
+        # Check if core services are running
+        stack_running = False
+        try:
+            containers = self.docker_client.list_containers()
+            core_services = {"db", "kong", "caddy", "vector"}
+            running_services = {c.get("service") for c in containers if c.get("status") == "running"}
+            stack_running = len(core_services & running_services) >= 2  # At least 2 core services
+        except Exception:
+            pass
+
         return SetupStatusResponse(
             setup_required=setup_required,
             has_env_file=has_env,
             has_secrets=len(missing_secrets) == 0,
             supabase_cloned=supabase_cloned,
             services_running=running,
+            stack_running=stack_running,
             missing_secrets=missing_secrets
         )
 
-    def get_available_services(self) -> List[ServiceSelectionInfo]:
-        """Get list of services available for selection."""
+    def get_available_services(self, profile: str = "cpu") -> List[ServiceSelectionInfo]:
+        """Get list of services available for selection with enhanced info."""
         try:
             parser = ComposeParser(str(self.base_path))
             graph = DependencyGraph(parser)
@@ -66,21 +78,45 @@ class SetupService:
 
         services = []
         for name, svc_def in parser.services.items():
-            # Skip init containers
-            if "import" in name or "pull-llama" in name:
+            # Skip init containers (except n8n-import which is needed for dependency tracking)
+            if "import" in name and name != "n8n-import":
                 continue
+            if "pull-llama" in name:
+                continue
+
+            info = graph.get_enhanced_service_info(name, profile)
+            if not info:
+                continue
+
+            config = SERVICE_CONFIGS.get(name)
+            group_meta = SERVICE_GROUPS.get(info["group"], {})
+
+            # Get human-readable dependency names
+            dep_display = []
+            for dep in info["dependencies"]:
+                dep_config = SERVICE_CONFIGS.get(dep)
+                dep_display.append(dep_config.display_name if dep_config else dep)
 
             services.append(ServiceSelectionInfo(
                 name=name,
-                group=graph.get_service_group(name),
-                description=f"From {svc_def.compose_file}",
-                required=name in ("db", "kong", "vector"),  # Core Supabase
-                dependencies=list(svc_def.depends_on.keys()),
-                profiles=svc_def.profiles,
-                default_enabled=len(svc_def.profiles) == 0  # No profile = always enabled
+                display_name=info["display_name"],
+                group=info["group"],
+                group_name=group_meta.get("name", info["group"]),
+                description=info["description"],
+                required=info["required"],
+                dependencies=info["dependencies"],
+                dependency_display=dep_display,
+                profiles=info["profiles"],
+                default_enabled=info["default_enabled"],
+                category=info["category"],
+                available_for_profile=info["available_for_profile"]
             ))
 
         return services
+
+    def validate_service_selection(self, selected: List[str], profile: str) -> dict:
+        """Validate a service selection."""
+        return validate_selection(selected, profile)
 
     async def clone_supabase_repo(self) -> SetupStepResult:
         """Clone/update Supabase repository."""

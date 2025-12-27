@@ -13,7 +13,7 @@ import { SetupWizardPage } from './pages/SetupWizardPage';
 import { Loading } from './components/common/Loading';
 
 const App: React.FC = () => {
-  const { checkAuth, checkSetupStatus, isLoading, setupRequired } = useAuthStore();
+  const { checkAuth, checkSetupStatus, isLoading, setupRequired, stackRunning } = useAuthStore();
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ const App: React.FC = () => {
     return <Loading message="Initializing..." />;
   }
 
-  if (setupRequired) {
+  if (setupRequired && !stackRunning) {
     return (
       <BrowserRouter>
         <Routes>

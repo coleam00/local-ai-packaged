@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authApi } from '../api/auth';
+import { setupApi } from '../api/setup';
 import type { User, LoginRequest, SetupRequest } from '../types/api';
 import { getAuthToken, clearAuthToken } from '../api/client';
 
@@ -9,6 +10,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   setupRequired: boolean;
+  stackRunning: boolean;
 
   checkAuth: () => Promise<void>;
   checkSetupStatus: () => Promise<boolean>;
@@ -24,6 +26,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
   error: null,
   setupRequired: false,
+  stackRunning: false,
 
   checkAuth: async () => {
     const token = getAuthToken();
@@ -44,7 +47,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   checkSetupStatus: async () => {
     try {
       const status = await authApi.getSetupStatus();
-      set({ setupRequired: status.setup_required, isLoading: false });
+      // Also check stack status
+      let stackRunning = false;
+      try {
+        const stackStatus = await setupApi.getStatus();
+        stackRunning = stackStatus.stack_running;
+      } catch {
+        // Ignore errors - stack might not be reachable
+      }
+
+      set({
+        setupRequired: status.setup_required,
+        stackRunning,
+        isLoading: false
+      });
       return status.setup_required;
     } catch {
       set({ isLoading: false });

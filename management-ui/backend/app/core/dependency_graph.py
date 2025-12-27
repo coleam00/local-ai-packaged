@@ -1,6 +1,10 @@
 from typing import Dict, List, Set, Optional
 from dataclasses import dataclass
 from .compose_parser import ComposeParser, ServiceDefinition
+from .service_dependencies import (
+    SERVICE_CONFIGS, SERVICE_GROUPS as CENTRALIZED_GROUPS,
+    get_required_for_selection, validate_selection
+)
 
 SERVICE_GROUPS = {
     "supabase": {
@@ -192,3 +196,36 @@ class DependencyGraph:
                     "services": existing
                 }
         return result
+
+    def get_service_config(self, service_name: str):
+        """Get centralized config for a service."""
+        return SERVICE_CONFIGS.get(service_name)
+
+    def get_enhanced_service_info(self, service_name: str, profile: str) -> Optional[Dict]:
+        """Get service info combining docker-compose and centralized config."""
+        compose_def = self.services.get(service_name)
+        central_config = SERVICE_CONFIGS.get(service_name)
+
+        if not compose_def:
+            return None
+
+        return {
+            "name": service_name,
+            "display_name": central_config.display_name if central_config else service_name,
+            "description": central_config.description if central_config else f"From {compose_def.compose_file}",
+            "group": central_config.group if central_config else self.get_service_group(service_name),
+            "dependencies": list(central_config.dependencies) if central_config else list(compose_def.depends_on.keys()),
+            "required": central_config.required if central_config else False,
+            "default_enabled": central_config.default_enabled if central_config else True,
+            "profiles": central_config.profiles if central_config else compose_def.profiles,
+            "category": central_config.category if central_config else "optional",
+            "available_for_profile": (
+                not central_config.profiles or
+                profile in central_config.profiles or
+                profile == "none"
+            ) if central_config else True
+        }
+
+    def validate_service_selection(self, selected: List[str], profile: str) -> Dict:
+        """Validate a service selection with the centralized config."""
+        return validate_selection(selected, profile)
