@@ -253,7 +253,14 @@ class SetupService:
                 supabase_cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])
             supabase_cmd.extend(["up", "-d"])
 
-            subprocess.run(supabase_cmd, cwd=self.base_path, check=True, capture_output=True)
+            result = subprocess.run(supabase_cmd, cwd=self.base_path, capture_output=True, text=True)
+            if result.returncode != 0:
+                error_msg = result.stderr or result.stdout or "Unknown error"
+                return SetupStepResult(
+                    step="start_stack",
+                    status="failed",
+                    error=f"Failed to start Supabase: {error_msg}"
+                )
 
             # Wait for Supabase to be ready
             await asyncio.sleep(10)
