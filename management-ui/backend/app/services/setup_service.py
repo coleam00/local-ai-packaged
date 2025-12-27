@@ -146,6 +146,15 @@ class SetupService:
                         "fix": "delete_supabase"
                     })
 
+        # Check for existing Supabase database data (password mismatch issue)
+        supabase_db_data = self.base_path / "supabase" / "docker" / "volumes" / "db" / "data"
+        if supabase_db_data.exists() and any(supabase_db_data.iterdir()):
+            warnings.append({
+                "type": "supabase_db_exists",
+                "message": "Supabase database data exists (may cause password mismatch)",
+                "fix": "delete_supabase_db"
+            })
+
         # Check for running containers
         try:
             containers = self.docker_client.list_containers()
@@ -204,6 +213,12 @@ class SetupService:
                     capture_output=True
                 )
                 return {"success": True, "message": "Deleted Docker volumes"}
+
+            elif fix_type == "delete_supabase_db":
+                supabase_db_data = self.base_path / "supabase" / "docker" / "volumes" / "db" / "data"
+                if supabase_db_data.exists():
+                    shutil.rmtree(supabase_db_data)
+                return {"success": True, "message": "Deleted Supabase database data"}
 
             else:
                 return {"success": False, "message": f"Unknown fix type: {fix_type}"}
