@@ -1,9 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, LogOut, User } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate to services page with search query
+      navigate(`/services?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    // If already on services page, update URL immediately
+    if (location.pathname === '/services') {
+      const params = new URLSearchParams(location.search);
+      if (e.target.value.trim()) {
+        params.set('search', e.target.value.trim());
+      } else {
+        params.delete('search');
+      }
+      navigate(`/services?${params.toString()}`, { replace: true });
+    }
+  };
 
   return (
     <header className="bg-[#1e293b] border-b border-[#374151] px-6 py-4">
@@ -14,11 +40,13 @@ export const Header: React.FC = () => {
         </h1>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-md mx-8">
+        <form onSubmit={handleSearch} className="flex-1 max-w-md mx-8">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
               type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
               placeholder="Search services..."
               className="w-full pl-10 pr-4 py-2 bg-[#2d3748] border border-[#374151] rounded-lg
                          text-white placeholder-slate-500 text-sm
@@ -26,7 +54,7 @@ export const Header: React.FC = () => {
                          transition-colors"
             />
           </div>
-        </div>
+        </form>
 
         {/* User Info */}
         <div className="flex items-center gap-4">

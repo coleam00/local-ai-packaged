@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useServicesStore } from '../store/servicesStore';
 import { ServiceCard, ServiceGroup } from '../components/services';
 import { RefreshCw, AlertCircle, Search, Layers, List } from 'lucide-react';
 import { Button } from '../components/common/Button';
-import { useState } from 'react';
 
 export const Services: React.FC = () => {
   const {
@@ -24,8 +24,17 @@ export const Services: React.FC = () => {
     clearError,
   } = useServicesStore();
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [viewMode, setViewMode] = useState<'grouped' | 'list'>('grouped');
+
+  // Sync search query from URL
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || '';
+    if (urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchServices();
@@ -115,7 +124,17 @@ export const Services: React.FC = () => {
             type="text"
             placeholder="Search services..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              // Update URL
+              const params = new URLSearchParams(searchParams);
+              if (e.target.value.trim()) {
+                params.set('search', e.target.value.trim());
+              } else {
+                params.delete('search');
+              }
+              setSearchParams(params, { replace: true });
+            }}
             className="w-full pl-10 pr-4 py-2 bg-[#2d3748] border border-[#374151] rounded-lg
                        text-white placeholder-slate-500 text-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
