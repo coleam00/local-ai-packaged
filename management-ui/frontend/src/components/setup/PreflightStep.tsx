@@ -3,6 +3,7 @@ import { setupApi } from '../../api/setup';
 import type { PreflightCheck } from '../../api/setup';
 import { CheckCircle, AlertTriangle, XCircle, Loader2, Wrench } from 'lucide-react';
 import { Button } from '../common/Button';
+import { ConfirmDeleteDialog } from '../common/ConfirmDeleteDialog';
 
 interface PreflightStepProps {
   onReady: (ready: boolean) => void;
@@ -13,6 +14,12 @@ export const PreflightStep: React.FC<PreflightStepProps> = ({ onReady }) => {
   const [loading, setLoading] = useState(true);
   const [fixing, setFixing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    fixType: string;
+    message: string;
+  }>({ isOpen: false, fixType: '', message: '' });
+  const [skipWarningDialog, setSkipWarningDialog] = useState(false);
 
   const runCheck = async () => {
     setLoading(true);
@@ -33,7 +40,18 @@ export const PreflightStep: React.FC<PreflightStepProps> = ({ onReady }) => {
     runCheck();
   }, []);
 
-  const handleFix = async (fixType: string) => {
+  const handleFixClick = (fixType: string, message: string) => {
+    // Show confirmation dialog for destructive operations
+    setConfirmDialog({
+      isOpen: true,
+      fixType,
+      message,
+    });
+  };
+
+  const handleConfirmFix = async () => {
+    const fixType = confirmDialog.fixType;
+    setConfirmDialog({ isOpen: false, fixType: '', message: '' });
     setFixing(fixType);
     try {
       const result = await setupApi.fixPreflightIssue(fixType);
@@ -48,6 +66,15 @@ export const PreflightStep: React.FC<PreflightStepProps> = ({ onReady }) => {
     } finally {
       setFixing(null);
     }
+  };
+
+  const handleCancelFix = () => {
+    setConfirmDialog({ isOpen: false, fixType: '', message: '' });
+  };
+
+  const handleSkipWarnings = () => {
+    setSkipWarningDialog(false);
+    onReady(true);
   };
 
   if (loading) {
@@ -102,7 +129,7 @@ export const PreflightStep: React.FC<PreflightStepProps> = ({ onReady }) => {
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={() => handleFix(issue.fix)}
+                  onClick={() => handleFixClick(issue.fix, issue.message)}
                   isLoading={fixing === issue.fix}
                   disabled={fixing !== null}
                 >
@@ -131,7 +158,7 @@ export const PreflightStep: React.FC<PreflightStepProps> = ({ onReady }) => {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => handleFix(warning.fix)}
+                  onClick={() => handleFixClick(warning.fix, warning.message)}
                   isLoading={fixing === warning.fix}
                   disabled={fixing !== null}
                 >
@@ -141,6 +168,19 @@ export const PreflightStep: React.FC<PreflightStepProps> = ({ onReady }) => {
               </div>
             ))}
           </div>
+          <div className="mt-3 p-3 bg-yellow-900/10 border border-yellow-700/30 rounded-lg">
+            <p className="text-sm text-yellow-300/80 mb-2">
+              You can proceed without fixing these warnings, but it may cause issues with your setup.
+            </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSkipWarningDialog(true)}
+              className="text-yellow-400 hover:text-yellow-300"
+            >
+              Skip warnings & proceed anyway
+            </Button>
+          </div>
         </div>
       )}
 
@@ -149,6 +189,26 @@ export const PreflightStep: React.FC<PreflightStepProps> = ({ onReady }) => {
           Re-check
         </Button>
       </div>
+
+      {/* Confirmation dialog for fix operations */}
+      <ConfirmDeleteDialog
+        isOpen={confirmDialog.isOpen}
+        title="Confirm Destructive Action"
+        message={`This will delete existing data to fix: "${confirmDialog.message}". This action cannot be undone.`}
+        confirmWord="delete"
+        onConfirm={handleConfirmFix}
+        onCancel={handleCancelFix}
+      />
+
+      {/* Confirmation dialog for skipping warnings */}
+      <ConfirmDeleteDialog
+        isOpen={skipWarningDialog}
+        title="Proceed with Warnings?"
+        message="Proceeding without fixing warnings may cause issues. Existing data might conflict with the new setup and cause services to fail."
+        confirmWord="continue"
+        onConfirm={handleSkipWarnings}
+        onCancel={() => setSkipWarningDialog(false)}
+      />
     </div>
   );
 };
