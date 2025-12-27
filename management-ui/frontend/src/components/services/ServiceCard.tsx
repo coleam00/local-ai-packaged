@@ -2,6 +2,7 @@ import { ExternalLink, Box } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { ServiceActions } from './ServiceActions';
 import type { ServiceInfo } from '../../types/service';
+import { getServiceUrlInfo } from '../../utils/serviceUrls';
 
 interface ServiceCardProps {
   service: ServiceInfo;
@@ -20,7 +21,8 @@ export function ServiceCard({
   onRestart,
   onClick,
 }: ServiceCardProps) {
-  const hasPorts = service.ports && service.ports.length > 0;
+  // Get the service URL from our mapping (Caddy proxy ports)
+  const urlInfo = getServiceUrlInfo(service.name);
 
   return (
     <div
@@ -62,34 +64,20 @@ export function ServiceCard({
       <div className="flex items-center justify-between">
         <StatusBadge status={service.status} health={service.health} />
 
-        {hasPorts && (
-          <div className="flex items-center gap-1">
-            {service.ports.slice(0, 2).map((port, idx) => {
-              const hostPort = port.split(':')[0];
-              const url = `http://localhost:${hostPort}`;
-              return (
-                <a
-                  key={idx}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs
-                             bg-[#374151] hover:bg-[#4b5563] rounded
-                             text-slate-400 hover:text-white transition-colors"
-                  title={`Open port ${hostPort}`}
-                >
-                  :{hostPort}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              );
-            })}
-            {service.ports.length > 2 && (
-              <span className="text-xs text-slate-500">
-                +{service.ports.length - 2}
-              </span>
-            )}
-          </div>
+        {urlInfo && service.status === 'running' && (
+          <a
+            href={urlInfo.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs
+                       bg-[#374151] hover:bg-[#4b5563] rounded
+                       text-slate-400 hover:text-white transition-colors"
+            title={`Open ${service.name}`}
+          >
+            {urlInfo.label}
+            <ExternalLink className="w-3 h-3" />
+          </a>
         )}
       </div>
 

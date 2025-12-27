@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Heart, Activity, ArrowRight, Settings, RefreshCw } from 'lucide-react';
 import { Card } from '../components/common/Card';
@@ -33,9 +33,11 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ value, max, color }) => {
 export const Dashboard: React.FC = () => {
   const {
     services,
+    enabledServices,
     isLoading,
     actionInProgress,
     fetchServices,
+    fetchEnabledServices,
     startService,
     stopService,
     restartService,
@@ -43,19 +45,28 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchServices();
+    fetchEnabledServices();
 
     // Poll for updates every 5 seconds
     const interval = setInterval(fetchServices, 5000);
     return () => clearInterval(interval);
-  }, [fetchServices]);
+  }, [fetchServices, fetchEnabledServices]);
 
-  // Calculate stats
-  const runningCount = services.filter((s) => s.status === 'running').length;
-  const healthyCount = services.filter((s) => s.health === 'healthy').length;
-  const totalCount = services.length;
+  // Filter services by enabled services (if configured)
+  const filteredServices = useMemo(() => {
+    if (enabledServices !== null && enabledServices.length > 0) {
+      return services.filter((service) => enabledServices.includes(service.name));
+    }
+    return services;
+  }, [services, enabledServices]);
+
+  // Calculate stats from filtered services
+  const runningCount = filteredServices.filter((s) => s.status === 'running').length;
+  const healthyCount = filteredServices.filter((s) => s.health === 'healthy').length;
+  const totalCount = filteredServices.length;
 
   // Get top 6 services sorted by status (running first)
-  const topServices = [...services]
+  const topServices = [...filteredServices]
     .sort((a, b) => {
       if (a.status === 'running' && b.status !== 'running') return -1;
       if (a.status !== 'running' && b.status === 'running') return 1;
@@ -162,7 +173,7 @@ export const Dashboard: React.FC = () => {
           </Link>
         </div>
 
-        {services.length === 0 ? (
+        {filteredServices.length === 0 ? (
           <Card>
             <p className="text-slate-400 text-center py-8">
               {isLoading ? (
