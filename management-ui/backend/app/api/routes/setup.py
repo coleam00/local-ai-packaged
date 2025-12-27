@@ -60,6 +60,25 @@ async def get_current_stack_config(
     )
 
 
+@router.get("/preflight")
+async def preflight_check(
+    setup_service: SetupService = Depends(get_setup_service),
+    _: dict = Depends(get_current_user)
+):
+    """Check environment state before setup."""
+    return setup_service.preflight_check()
+
+
+@router.post("/preflight/fix")
+async def fix_preflight_issue(
+    fix_type: str,
+    setup_service: SetupService = Depends(get_setup_service),
+    _: dict = Depends(get_current_user)
+):
+    """Fix a preflight issue."""
+    return setup_service.fix_preflight_issue(fix_type)
+
+
 @router.get("/services", response_model=List[ServiceSelectionInfo])
 async def get_available_services(
     profile: str = "cpu",

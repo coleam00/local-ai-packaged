@@ -118,6 +118,98 @@ class SetupService:
         """Validate a service selection."""
         return validate_selection(selected, profile)
 
+    def preflight_check(self) -> dict:
+        """Check environment state before setup."""
+        issues = []
+        warnings = []
+        can_proceed = True
+
+        supabase_dir = self.base_path / "supabase"
+
+        # Check supabase directory
+        if supabase_dir.exists():
+            git_dir = supabase_dir / ".git"
+            if not git_dir.exists():
+                issues.append({
+                    "type": "supabase_not_git",
+                    "message": "supabase/ folder exists but is not a git repository",
+                    "fix": "delete_supabase"
+                })
+                can_proceed = False
+            else:
+                # Check if it's a valid supabase repo
+                docker_dir = supabase_dir / "docker"
+                if not docker_dir.exists():
+                    warnings.append({
+                        "type": "supabase_incomplete",
+                        "message": "supabase/ repo exists but docker/ folder is missing",
+                        "fix": "delete_supabase"
+                    })
+
+        # Check for running containers
+        try:
+            containers = self.docker_client.list_containers()
+            running = [c for c in containers if c.get("status") == "running"]
+            if running:
+                warnings.append({
+                    "type": "containers_running",
+                    "message": f"{len(running)} containers are currently running",
+                    "fix": "stop_containers"
+                })
+        except Exception:
+            pass
+
+        # Check for existing volumes
+        try:
+            result = subprocess.run(
+                ["docker", "volume", "ls", "-q", "--filter", "name=localai"],
+                capture_output=True, text=True
+            )
+            volumes = [v for v in result.stdout.strip().split("\n") if v]
+            if volumes:
+                warnings.append({
+                    "type": "volumes_exist",
+                    "message": f"{len(volumes)} Docker volumes from previous install exist",
+                    "fix": "delete_volumes"
+                })
+        except Exception:
+            pass
+
+        return {
+            "can_proceed": can_proceed,
+            "issues": issues,
+            "warnings": warnings
+        }
+
+    def fix_preflight_issue(self, fix_type: str) -> dict:
+        """Fix a preflight issue."""
+        try:
+            if fix_type == "delete_supabase":
+                supabase_dir = self.base_path / "supabase"
+                if supabase_dir.exists():
+                    shutil.rmtree(supabase_dir)
+                return {"success": True, "message": "Deleted supabase/ folder"}
+
+            elif fix_type == "stop_containers":
+                self.docker_client.compose_down(profile="cpu")
+                return {"success": True, "message": "Stopped all containers"}
+
+            elif fix_type == "delete_volumes":
+                subprocess.run(
+                    ["docker", "volume", "rm", "-f"] +
+                    subprocess.run(
+                        ["docker", "volume", "ls", "-q", "--filter", "name=localai"],
+                        capture_output=True, text=True
+                    ).stdout.strip().split(),
+                    capture_output=True
+                )
+                return {"success": True, "message": "Deleted Docker volumes"}
+
+            else:
+                return {"success": False, "message": f"Unknown fix type: {fix_type}"}
+        except Exception as e:
+            return {"success": False, "message": str(e)}
+
     async def clone_supabase_repo(self) -> SetupStepResult:
         """Clone/update Supabase repository."""
         supabase_dir = self.base_path / "supabase"
@@ -144,10 +236,21 @@ class SetupService:
                     cwd=supabase_dir, check=True, capture_output=True
                 )
             else:
-                subprocess.run(
+                # Try to pull, but don't fail if it doesn't work
+                result = subprocess.run(
                     ["git", "pull"],
-                    cwd=supabase_dir, check=True, capture_output=True
+                    cwd=supabase_dir, capture_output=True, text=True
                 )
+                if result.returncode != 0:
+                    # Reset to origin/master if pull fails
+                    subprocess.run(
+                        ["git", "fetch", "origin"],
+                        cwd=supabase_dir, capture_output=True
+                    )
+                    subprocess.run(
+                        ["git", "reset", "--hard", "origin/master"],
+                        cwd=supabase_dir, capture_output=True
+                    )
 
             return SetupStepResult(
                 step="clone_supabase",

@@ -41,6 +41,17 @@ export interface StackConfig {
   setup_completed: boolean;
 }
 
+export interface PreflightCheck {
+  can_proceed: boolean;
+  issues: Array<{ type: string; message: string; fix: string }>;
+  warnings: Array<{ type: string; message: string; fix: string }>;
+}
+
+export interface FixResult {
+  success: boolean;
+  message: string;
+}
+
 export const setupApi = {
   async getStatus(): Promise<SetupStatus> {
     const response = await apiClient.get<SetupStatus>('/setup/status');
@@ -54,6 +65,18 @@ export const setupApi = {
     } catch {
       return null;
     }
+  },
+
+  async preflightCheck(): Promise<PreflightCheck> {
+    const response = await apiClient.get<PreflightCheck>('/setup/preflight');
+    return response.data;
+  },
+
+  async fixPreflightIssue(fixType: string): Promise<FixResult> {
+    const response = await apiClient.post<FixResult>('/setup/preflight/fix', null, {
+      params: { fix_type: fixType }
+    });
+    return response.data;
   },
 
   async getServices(profile: string): Promise<ServiceInfo[]> {

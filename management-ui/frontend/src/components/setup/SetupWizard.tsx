@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../common/Button';
 import { Card } from '../common/Card';
+import { PreflightStep } from './PreflightStep';
 import { ProfileStep } from './ProfileStep';
 import { ServicesStep } from './ServicesStep';
 import { EnvironmentStep } from './EnvironmentStep';
@@ -10,8 +11,8 @@ import { ConfirmStep } from './ConfirmStep';
 import { apiClient } from '../../api/client';
 import { Check, ChevronLeft, ChevronRight, Rocket, AlertCircle, Loader2 } from 'lucide-react';
 
-const STEPS = ['profile', 'services', 'environment', 'secrets', 'confirm'] as const;
-const STEP_LABELS = ['Profile', 'Services', 'Environment', 'Secrets', 'Confirm'];
+const STEPS = ['preflight', 'profile', 'services', 'environment', 'secrets', 'confirm'] as const;
+const STEP_LABELS = ['Check', 'Profile', 'Services', 'Environment', 'Secrets', 'Confirm'];
 
 interface SetupConfig {
   profile: string;
@@ -39,6 +40,7 @@ export const SetupWizard: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [setupResult, setSetupResult] = useState<SetupResult | null>(null);
+  const [preflightReady, setPreflightReady] = useState(false);
   const [config, setConfig] = useState<SetupConfig>({
     profile: 'cpu',
     environment: 'private',
@@ -82,6 +84,8 @@ export const SetupWizard: React.FC = () => {
 
   const canProceed = () => {
     switch (STEPS[currentStep]) {
+      case 'preflight':
+        return preflightReady;
       case 'services':
         return config.enabled_services.length > 0 || true; // Allow proceeding with defaults
       case 'secrets':
@@ -93,6 +97,8 @@ export const SetupWizard: React.FC = () => {
 
   const renderStep = () => {
     switch (STEPS[currentStep]) {
+      case 'preflight':
+        return <PreflightStep onReady={setPreflightReady} />;
       case 'profile':
         return (
           <ProfileStep
