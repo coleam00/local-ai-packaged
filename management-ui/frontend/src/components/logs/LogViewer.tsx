@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Download, Trash2, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { useLogStream } from '../../hooks/useWebSocket';
 import { LogStream } from './LogStream';
@@ -8,7 +9,9 @@ import { servicesApi } from '../../api/services';
 import type { ServiceInfo } from '../../types/service';
 
 export const LogViewer: React.FC = () => {
-  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const serviceFromUrl = searchParams.get('service');
+  const [selectedService, setSelectedService] = useState<string | null>(serviceFromUrl);
   const [availableServices, setAvailableServices] = useState<ServiceInfo[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
@@ -29,8 +32,11 @@ export const LogViewer: React.FC = () => {
         const response = await servicesApi.list();
         const running = response.services.filter((s) => s.status === 'running');
         setAvailableServices(running);
-        if (running.length > 0) {
-          setSelectedService((current) => current ?? running[0].name);
+        // If URL has a service, use it; otherwise pick first running service
+        if (serviceFromUrl && running.some(s => s.name === serviceFromUrl)) {
+          setSelectedService(serviceFromUrl);
+        } else if (running.length > 0 && !selectedService) {
+          setSelectedService(running[0].name);
         }
       } catch (e) {
         console.error('Failed to fetch services:', e);
@@ -39,7 +45,17 @@ export const LogViewer: React.FC = () => {
       }
     };
     fetchServices();
-  }, []);
+  }, [serviceFromUrl]);
+
+  // Update URL when service changes
+  const handleServiceChange = (serviceName: string | null) => {
+    setSelectedService(serviceName);
+    if (serviceName) {
+      setSearchParams({ service: serviceName });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   const handleDownload = () => {
     const content = logs.join('\n');
@@ -74,7 +90,7 @@ export const LogViewer: React.FC = () => {
           <label className="text-sm text-gray-400">Service:</label>
           <select
             value={selectedService || ''}
-            onChange={(e) => setSelectedService(e.target.value || null)}
+            onChange={(e) => handleServiceChange(e.target.value || null)}
             disabled={isLoadingServices}
             className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[200px]"
           >

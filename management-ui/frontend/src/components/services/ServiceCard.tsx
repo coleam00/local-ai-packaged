@@ -1,4 +1,5 @@
-import { ExternalLink, Box } from 'lucide-react';
+import { ExternalLink, Box, FileText } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { StatusBadge } from './StatusBadge';
 import { ServiceActions } from './ServiceActions';
 import type { ServiceInfo } from '../../types/service';
@@ -64,21 +65,35 @@ export function ServiceCard({
       <div className="flex items-center justify-between">
         <StatusBadge status={service.status} health={service.health} />
 
-        {urlInfo && service.status === 'running' && (
-          <a
-            href={urlInfo.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 px-2 py-1 text-xs
-                       bg-[#374151] hover:bg-[#4b5563] rounded
-                       text-slate-400 hover:text-white transition-colors"
-            title={`Open ${service.name}`}
-          >
-            {urlInfo.label}
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        )}
+        <div className="flex items-center gap-2">
+          {service.status === 'running' && (
+            <Link
+              to={`/logs?service=${service.name}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs
+                         bg-[#374151] hover:bg-[#4b5563] rounded
+                         text-slate-400 hover:text-white transition-colors"
+              title={`View logs for ${service.name}`}
+            >
+              <FileText className="w-3 h-3" />
+            </Link>
+          )}
+          {urlInfo && service.status === 'running' && (
+            <a
+              href={urlInfo.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs
+                         bg-[#374151] hover:bg-[#4b5563] rounded
+                         text-slate-400 hover:text-white transition-colors"
+              title={`Open ${service.name}`}
+            >
+              {urlInfo.label}
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
       </div>
 
       {service.profiles && service.profiles.length > 0 && (
