@@ -7,7 +7,7 @@ services:
     container_name: localai-management
     restart: unless-stopped
     ports:
-      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9999:9000"
     volumes:
       # Docker socket for container management
       - /var/run/docker.sock:/var/run/docker.sock:ro

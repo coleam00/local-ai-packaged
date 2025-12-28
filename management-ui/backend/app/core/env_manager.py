@@ -152,10 +152,34 @@ class EnvManager:
         return backup_path or ""
 
     def _sync_to_supabase(self):
-        """Copy .env to supabase/docker/.env"""
-        supabase_env = self.base_path / "supabase" / "docker" / ".env"
-        if supabase_env.parent.exists() and self.env_file.exists():
-            shutil.copy(self.env_file, supabase_env)
+        """Merge root .env with supabase/docker/.env.example to create supabase/docker/.env"""
+        supabase_dir = self.base_path / "supabase" / "docker"
+        supabase_env = supabase_dir / ".env"
+        supabase_example = supabase_dir / ".env.example"
+
+        if not supabase_dir.exists() or not self.env_file.exists():
+            return
+
+        # Start with Supabase's .env.example as base (contains all required Supabase vars)
+        supabase_vars = {}
+        if supabase_example.exists():
+            with open(supabase_example, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if '=' in line:
+                        key, _, value = line.partition('=')
+                        supabase_vars[key.strip()] = value.strip()
+
+        # Overlay our root .env values (overrides Supabase defaults with our secrets)
+        root_vars = self.load()
+        supabase_vars.update(root_vars)
+
+        # Write merged config to supabase/docker/.env
+        with open(supabase_env, 'w') as f:
+            for key, value in supabase_vars.items():
+                f.write(f"{key}={value}\n")
 
     def validate(self, env: Dict[str, str]) -> List[Dict]:
         """Validate environment variables against schema."""

@@ -318,7 +318,7 @@ Build and start the management UI alongside your existing services:
 docker compose -f docker-compose.management.yml up -d --build
 ```
 
-Once running, access the Management UI at <http://localhost:9000/>
+Once running, access the Management UI at <http://localhost:9999/>
 
 ### Stopping the Management UI
 

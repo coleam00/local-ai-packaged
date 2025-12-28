@@ -18,6 +18,61 @@ from ..core.port_scanner import PortScanner, get_all_default_ports
 from typing import Dict
 
 
+def _format_docker_error(raw_output: str) -> str:
+    """Format docker compose error output for readability."""
+    lines = raw_output.strip().split('\n') if raw_output else []
+
+    warnings = []
+    errors = []
+    status_lines = []
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Parse docker compose log format: time="..." level=... msg="..."
+        if 'level=warning' in line:
+            # Extract the message
+            if 'msg="' in line:
+                msg_start = line.index('msg="') + 5
+                msg_end = line.rindex('"')
+                warnings.append(line[msg_start:msg_end])
+        elif 'level=error' in line or 'Error' in line or 'error' in line.lower():
+            # Clean up error lines
+            if 'msg="' in line:
+                msg_start = line.index('msg="') + 5
+                msg_end = line.rindex('"')
+                errors.append(line[msg_start:msg_end])
+            else:
+                errors.append(line)
+        elif any(keyword in line for keyword in ['Creating', 'Created', 'Starting', 'Started', 'Waiting', 'failed', 'unhealthy']):
+            status_lines.append(line)
+
+    # Build formatted output
+    parts = []
+
+    if errors:
+        parts.append("ERRORS:")
+        for err in errors:
+            parts.append(f"  • {err}")
+
+    if warnings:
+        # Deduplicate warnings
+        unique_warnings = list(dict.fromkeys(warnings))
+        parts.append("\nWARNINGS:")
+        for warn in unique_warnings:
+            parts.append(f"  • {warn}")
+
+    if status_lines:
+        # Show last few status lines for context
+        parts.append("\nSTATUS:")
+        for status in status_lines[-10:]:
+            parts.append(f"  {status}")
+
+    return '\n'.join(parts) if parts else raw_output
+
+
 class SetupService:
     """Handles initial setup and stack orchestration."""
 
@@ -505,11 +560,12 @@ class SetupService:
 
             result = subprocess.run(supabase_cmd, cwd=self.base_path, capture_output=True, text=True)
             if result.returncode != 0:
-                error_msg = result.stderr or result.stdout or "Unknown error"
+                raw_error = result.stderr or result.stdout or "Unknown error"
+                formatted_error = _format_docker_error(raw_error)
                 return SetupStepResult(
                     step="start_stack",
                     status="failed",
-                    error=f"Failed to start Supabase: {error_msg}"
+                    error=f"Failed to start Supabase:\n\n{formatted_error}"
                 )
 
             # Wait for Supabase to be ready
@@ -529,10 +585,12 @@ class SetupService:
                     message="Stack started successfully"
                 )
             else:
+                raw_error = result.stderr or result.stdout or "Unknown error"
+                formatted_error = _format_docker_error(raw_error)
                 return SetupStepResult(
                     step="start_stack",
                     status="failed",
-                    error=result.stderr
+                    error=f"Failed to start local AI services:\n\n{formatted_error}"
                 )
 
         except Exception as e:
