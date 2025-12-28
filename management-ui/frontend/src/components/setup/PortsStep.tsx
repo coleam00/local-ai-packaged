@@ -124,7 +124,7 @@ export const PortsStep: React.FC<PortsStepProps> = ({
       <div className="flex flex-col items-center justify-center py-12">
         <Loader2 className="w-8 h-8 text-blue-400 animate-spin mb-4" />
         <p className="text-gray-400">Checking port availability...</p>
-        <p className="text-sm text-gray-500 mt-2">This may take a moment while we scan for conflicts</p>
+        <p className="text-sm text-gray-500 mt-2">This usually takes 10-30 seconds. If it takes longer than a minute, something may be wrong.</p>
       </div>
     );
   }
