@@ -341,6 +341,19 @@ class SetupService:
         except (PermissionError, OSError):
             pass
 
+        # Check for vector.yml being a directory instead of file (Windows Docker issue)
+        try:
+            vector_yml = self.base_path / "supabase" / "docker" / "volumes" / "logs" / "vector.yml"
+            if vector_yml.exists() and vector_yml.is_dir():
+                issues.append({
+                    "type": "vector_yml_is_directory",
+                    "message": "vector.yml is a directory instead of a file (Windows Docker issue)",
+                    "fix": "fix_vector_yml"
+                })
+                can_proceed = False
+        except (PermissionError, OSError):
+            pass
+
         # Check for running containers
         try:
             containers = self.docker_client.list_containers()
@@ -411,6 +424,17 @@ class SetupService:
                 if supabase_env.exists():
                     supabase_env.unlink()
                 return {"success": True, "message": "Deleted Supabase .env file (will be regenerated)"}
+
+            elif fix_type == "fix_vector_yml":
+                # Fix vector.yml being a directory instead of a file (Windows Docker issue)
+                vector_yml = self.base_path / "supabase" / "docker" / "volumes" / "logs" / "vector.yml"
+                if vector_yml.exists() and vector_yml.is_dir():
+                    shutil.rmtree(vector_yml)
+                # Re-clone will restore the proper file, or we delete supabase folder
+                supabase_dir = self.base_path / "supabase"
+                if supabase_dir.exists():
+                    shutil.rmtree(supabase_dir)
+                return {"success": True, "message": "Fixed vector.yml and deleted supabase folder (will re-clone)"}
 
             else:
                 return {"success": False, "message": f"Unknown fix type: {fix_type}"}
