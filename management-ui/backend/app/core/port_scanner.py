@@ -31,12 +31,17 @@ class PortScanner:
     def __init__(self, host: str = "127.0.0.1"):
         self.host = host
         self._docker_ports: Dict[int, str] = {}  # port -> container name
+        self._reserved_ports: set = set()  # ports already suggested for other services
 
-    def is_port_available(self, port: int) -> Tuple[bool, Optional[str]]:
+    def is_port_available(self, port: int, check_reserved: bool = True) -> Tuple[bool, Optional[str]]:
         """
         Check if a port is available.
         Returns (available, used_by) tuple.
         """
+        # Check if already reserved for another service
+        if check_reserved and port in self._reserved_ports:
+            return False, "reserved for another service"
+
         # Check host port
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(1)
@@ -54,6 +59,10 @@ class PortScanner:
             return False, f"Docker: {self._docker_ports[port]}"
 
         return True, None
+
+    def clear_reserved_ports(self) -> None:
+        """Clear all reserved ports. Call before starting a new scan session."""
+        self._reserved_ports.clear()
 
     def load_docker_ports(self, docker_client) -> None:
         """Load ports used by running Docker containers."""
@@ -99,13 +108,21 @@ class PortScanner:
     ) -> PortScanResult:
         """
         Scan ports for a service and suggest alternatives if needed.
+        Reserves suggested ports to prevent conflicts with other services.
         """
         ports = {}
         suggested = {}
         all_available = True
 
         for port_name, port in default_ports.items():
-            available, used_by = self.is_port_available(port)
+            # Check availability (without reserved check for initial status display)
+            available, used_by = self.is_port_available(port, check_reserved=False)
+
+            # Also check if port is reserved by another service we're configuring
+            if available and port in self._reserved_ports:
+                available = False
+                used_by = "reserved for another service"
+
             ports[port_name] = PortStatus(
                 port=port,
                 available=available,
@@ -114,10 +131,15 @@ class PortScanner:
 
             if not available:
                 all_available = False
-                # Find alternative
-                suggested[port_name] = self.find_available_port(port + 1)
+                # Find alternative that's not reserved
+                suggested_port = self.find_available_port(port + 1)
+                suggested[port_name] = suggested_port
+                # Reserve this port for this service
+                self._reserved_ports.add(suggested_port)
             else:
                 suggested[port_name] = port
+                # Reserve this port for this service
+                self._reserved_ports.add(port)
 
         return PortScanResult(
             service_name=service_name,

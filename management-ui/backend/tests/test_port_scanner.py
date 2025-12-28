@@ -181,6 +181,57 @@ class TestPortStatus:
         assert status.used_by == "nginx"
 
 
+class TestPortReservation:
+    """Tests for port reservation to prevent conflicts."""
+
+    def test_reserved_ports_prevent_duplicates(self):
+        """Test that reserved ports prevent duplicate suggestions."""
+        scanner = PortScanner()
+
+        # Scan first service - gets port 59980
+        result1 = scanner.scan_service_ports(
+            service_name="service1",
+            display_name="Service 1",
+            default_ports={"http": 59980}
+        )
+        assert result1.suggested_ports["http"] == 59980
+
+        # Scan second service - also wants 59980, should get different port
+        result2 = scanner.scan_service_ports(
+            service_name="service2",
+            display_name="Service 2",
+            default_ports={"http": 59980}
+        )
+        # Should get a different port since 59980 is reserved
+        assert result2.suggested_ports["http"] != 59980
+        assert result2.ports["http"].available is False
+        assert "reserved" in result2.ports["http"].used_by
+
+    def test_clear_reserved_ports(self):
+        """Test that clearing reserved ports works."""
+        scanner = PortScanner()
+
+        # Reserve a port
+        scanner.scan_service_ports(
+            service_name="service1",
+            display_name="Service 1",
+            default_ports={"http": 59979}
+        )
+        assert 59979 in scanner._reserved_ports
+
+        # Clear and verify
+        scanner.clear_reserved_ports()
+        assert len(scanner._reserved_ports) == 0
+
+        # Now the port should be available again
+        result = scanner.scan_service_ports(
+            service_name="service2",
+            display_name="Service 2",
+            default_ports={"http": 59979}
+        )
+        assert result.suggested_ports["http"] == 59979
+
+
 class TestPortScanResult:
     """Tests for PortScanResult dataclass."""
 
