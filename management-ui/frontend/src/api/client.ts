@@ -24,8 +24,13 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Don't clear token or redirect on setup pages (causes infinite loop)
+      const isSetupPage = window.location.pathname.includes('/setup');
+      if (!isSetupPage) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+      // On setup pages, just let the error propagate without clearing token
     }
     return Promise.reject(error);
   }

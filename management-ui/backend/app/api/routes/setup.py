@@ -64,30 +64,27 @@ async def get_current_stack_config(
 
 @router.get("/preflight")
 async def preflight_check(
-    setup_service: SetupService = Depends(get_setup_service),
-    _: dict = Depends(get_current_user)
+    setup_service: SetupService = Depends(get_setup_service)
 ):
-    """Check environment state before setup."""
+    """Check environment state before setup (no auth - used during initial setup)."""
     return setup_service.preflight_check()
 
 
 @router.post("/preflight/fix")
 async def fix_preflight_issue(
     fix_type: str,
-    setup_service: SetupService = Depends(get_setup_service),
-    _: dict = Depends(get_current_user)
+    setup_service: SetupService = Depends(get_setup_service)
 ):
-    """Fix a preflight issue."""
+    """Fix a preflight issue (no auth - used during initial setup)."""
     return setup_service.fix_preflight_issue(fix_type)
 
 
 @router.get("/services", response_model=List[ServiceSelectionInfo])
 async def get_available_services(
     profile: str = "cpu",
-    setup_service: SetupService = Depends(get_setup_service),
-    _: dict = Depends(get_current_user)
+    setup_service: SetupService = Depends(get_setup_service)
 ):
-    """Get available services for selection."""
+    """Get available services for selection (no auth - used during initial setup)."""
     return setup_service.get_available_services(profile)
 
 
@@ -95,8 +92,7 @@ async def get_available_services(
 async def validate_service_selection(
     selected: List[str] = Body(..., embed=False),
     profile: str = "cpu",
-    setup_service: SetupService = Depends(get_setup_service),
-    _: dict = Depends(get_current_user)
+    setup_service: SetupService = Depends(get_setup_service)
 ):
     """Validate a service selection and get auto-enabled dependencies."""
     result = setup_service.validate_service_selection(selected, profile)
@@ -104,10 +100,8 @@ async def validate_service_selection(
 
 
 @router.post("/generate-secrets")
-async def generate_secrets_for_setup(
-    _: dict = Depends(get_current_user)
-):
-    """Generate all secrets for setup."""
+async def generate_secrets_for_setup():
+    """Generate all secrets for setup (no auth - used during initial setup)."""
     secrets = generate_all_secrets()
     return {"secrets": secrets}
 
@@ -116,10 +110,9 @@ async def generate_secrets_for_setup(
 async def check_port_availability(
     enabled_services: str = "",  # Comma-separated list
     profile: str = "cpu",  # Selected GPU profile
-    setup_service: SetupService = Depends(get_setup_service),
-    _: dict = Depends(get_current_user)
+    setup_service: SetupService = Depends(get_setup_service)
 ):
-    """Check port availability for setup."""
+    """Check port availability for setup (no auth - used during initial setup)."""
     services = [s.strip() for s in enabled_services.split(",") if s.strip()] if enabled_services else None
     result = setup_service.check_port_availability(services, profile)
     return PortCheckResponse(**result)
@@ -128,10 +121,9 @@ async def check_port_availability(
 @router.post("/validate-ports", response_model=PortValidation)
 async def validate_port_configuration(
     port_config: Dict[str, Dict[str, int]] = Body(...),
-    setup_service: SetupService = Depends(get_setup_service),
-    _: dict = Depends(get_current_user)
+    setup_service: SetupService = Depends(get_setup_service)
 ):
-    """Validate custom port configuration."""
+    """Validate custom port configuration (no auth - used during initial setup)."""
     result = setup_service.validate_port_configuration(port_config)
     return PortValidation(**result)
 
@@ -140,8 +132,7 @@ async def validate_port_configuration(
 async def complete_setup(
     config: SetupConfigRequest,
     setup_service: SetupService = Depends(get_setup_service),
-    db: Session = Depends(get_db),
-    _: dict = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """Run the complete setup process."""
     result = await setup_service.run_full_setup(config)
