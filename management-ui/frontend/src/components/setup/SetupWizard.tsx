@@ -155,6 +155,7 @@ export const SetupWizard: React.FC = () => {
         return (
           <PortsStep
             enabledServices={config.enabled_services}
+            profile={config.profile}
             value={config.port_overrides}
             onChange={(port_overrides) => setConfig({ ...config, port_overrides })}
             onReady={setPortsReady}

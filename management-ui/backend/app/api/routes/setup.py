@@ -115,12 +115,13 @@ async def generate_secrets_for_setup(
 @router.get("/check-ports", response_model=PortCheckResponse)
 async def check_port_availability(
     enabled_services: str = "",  # Comma-separated list
+    profile: str = "cpu",  # Selected GPU profile
     setup_service: SetupService = Depends(get_setup_service),
     _: dict = Depends(get_current_user)
 ):
     """Check port availability for setup."""
     services = [s.strip() for s in enabled_services.split(",") if s.strip()] if enabled_services else None
-    result = setup_service.check_port_availability(services)
+    result = setup_service.check_port_availability(services, profile)
     return PortCheckResponse(**result)
 
 

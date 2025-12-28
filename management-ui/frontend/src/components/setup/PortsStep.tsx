@@ -6,6 +6,7 @@ import { Button } from '../common/Button';
 
 interface PortsStepProps {
   enabledServices: string[];
+  profile: string;
   value: Record<string, Record<string, number>>;  // service -> port_name -> port
   onChange: (ports: Record<string, Record<string, number>>) => void;
   onReady: (ready: boolean) => void;
@@ -13,6 +14,7 @@ interface PortsStepProps {
 
 export const PortsStep: React.FC<PortsStepProps> = ({
   enabledServices,
+  profile,
   value,
   onChange,
   onReady
@@ -29,7 +31,7 @@ export const PortsStep: React.FC<PortsStepProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const result = await setupApi.checkPorts(enabledServices);
+      const result = await setupApi.checkPorts(enabledServices, profile);
       setCheck(result);
 
       // Initialize with suggested ports
@@ -49,7 +51,7 @@ export const PortsStep: React.FC<PortsStepProps> = ({
 
   useEffect(() => {
     runCheck();
-  }, [enabledServices.join(',')]);
+  }, [enabledServices.join(','), profile]);
 
   const handlePortChange = (serviceName: string, portName: string, newPort: number) => {
     onChange({

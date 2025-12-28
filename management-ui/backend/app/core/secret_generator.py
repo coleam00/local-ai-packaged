@@ -9,8 +9,8 @@ def generate_hex_key(bytes_length: int = 32) -> str:
 
 def generate_safe_password(length: int = 24) -> str:
     """Generate a secure password without problematic characters."""
-    # Avoid @, %, and other chars that can cause issues in connection strings
-    alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$^&*-_=+"
+    # Avoid @, %, =, +, and other chars that can cause issues in .env files and connection strings
+    alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$^&*-_"
     return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 def generate_supabase_jwt(role: str, jwt_secret: str) -> str:

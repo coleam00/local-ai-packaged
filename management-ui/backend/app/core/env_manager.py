@@ -117,10 +117,20 @@ class EnvManager:
                 key, _, value = line.partition('=')
                 key = key.strip()
                 value = value.strip()
-                # Skip if key looks corrupted (should start with letter/underscore)
-                if key and (key[0].isalpha() or key[0] == '_'):
+                # Validate key: must be valid env var name (letters, digits, underscores, starting with letter/underscore)
+                if key and self._is_valid_env_key(key):
                     env[key] = value
         return env
+
+    def _is_valid_env_key(self, key: str) -> bool:
+        """Check if a key is a valid environment variable name."""
+        if not key:
+            return False
+        # Must start with letter or underscore
+        if not (key[0].isalpha() or key[0] == '_'):
+            return False
+        # Rest must be alphanumeric or underscore
+        return all(c.isalnum() or c == '_' for c in key)
 
     def load(self) -> Dict[str, str]:
         """Load current .env file."""

@@ -175,7 +175,7 @@ class SetupService:
         """Validate a service selection."""
         return validate_selection(selected, profile)
 
-    def check_port_availability(self, enabled_services: List[str] = None) -> dict:
+    def check_port_availability(self, enabled_services: List[str] = None, profile: str = "cpu") -> dict:
         """
         Check port availability for selected services.
         Returns scan results with conflicts and suggestions.
@@ -192,6 +192,22 @@ class SetupService:
                 name: ports for name, ports in all_ports.items()
                 if name in enabled_services
             }
+
+        # Filter Ollama variants based on profile - only show the one matching the profile
+        ollama_variants = {"ollama-cpu", "ollama-gpu", "ollama-gpu-amd"}
+        profile_to_ollama = {
+            "cpu": "ollama-cpu",
+            "gpu-nvidia": "ollama-gpu",
+            "gpu-amd": "ollama-gpu-amd",
+            "none": None  # No Ollama
+        }
+        active_ollama = profile_to_ollama.get(profile)
+
+        # Remove non-matching Ollama variants
+        all_ports = {
+            name: ports for name, ports in all_ports.items()
+            if name not in ollama_variants or name == active_ollama
+        }
 
         results = []
         total_ports = 0

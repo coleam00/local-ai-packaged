@@ -127,8 +127,11 @@ export const setupApi = {
     return response.data.secrets;
   },
 
-  async checkPorts(enabledServices?: string[]): Promise<PortCheckResponse> {
-    const params = enabledServices ? { enabled_services: enabledServices.join(',') } : {};
+  async checkPorts(enabledServices?: string[], profile: string = 'cpu'): Promise<PortCheckResponse> {
+    const params: Record<string, string> = { profile };
+    if (enabledServices) {
+      params.enabled_services = enabledServices.join(',');
+    }
     const response = await apiClient.get<PortCheckResponse>('/setup/check-ports', { params });
     return response.data;
   },
