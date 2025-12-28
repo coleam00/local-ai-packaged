@@ -11,12 +11,8 @@ services:
     volumes:
       # Docker socket for container management
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      # Main project directory (read-only for compose files)
-      - ./:/config:ro
-      # Writable .env file
-      - ./.env:/config/.env:rw
-      # Backup directory
-      - ./.env_backups:/config/.env_backups:rw
+      # Main project directory (writable for setup wizard fixes)
+      - ./:/config:rw
       # Persistent database
       - management-data:/data
     environment:
