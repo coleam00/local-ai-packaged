@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../common/Button';
 import { Card } from '../common/Card';
@@ -11,7 +11,7 @@ import { SecretsStep } from './SecretsStep';
 import { ConfirmStep } from './ConfirmStep';
 import { apiClient } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
-import { Check, ChevronLeft, ChevronRight, Rocket, AlertCircle, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Rocket, AlertCircle, Loader2, Clock } from 'lucide-react';
 
 const STEPS = ['preflight', 'profile', 'services', 'ports', 'environment', 'secrets', 'confirm'] as const;
 const STEP_LABELS = ['Check', 'Profile', 'Services', 'Ports', 'Environment', 'Secrets', 'Confirm'];
@@ -46,6 +46,7 @@ export const SetupWizard: React.FC = () => {
   const [setupResult, setSetupResult] = useState<SetupResult | null>(null);
   const [preflightReady, setPreflightReady] = useState(false);
   const [portsReady, setPortsReady] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const [config, setConfig] = useState<SetupConfig>({
     profile: 'cpu',
     environment: 'private',
@@ -53,6 +54,26 @@ export const SetupWizard: React.FC = () => {
     enabled_services: [],
     port_overrides: {},
   });
+
+  // Elapsed time counter during setup
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (isSubmitting && !setupResult) {
+      setElapsedTime(0);
+      interval = setInterval(() => {
+        setElapsedTime(t => t + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isSubmitting, setupResult]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  };
 
   const handleNext = () => {
     let nextStep = currentStep + 1;
@@ -186,16 +207,65 @@ export const SetupWizard: React.FC = () => {
           ) : (
             <>
               <Loader2 className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-spin" />
-              <h3 className="text-xl font-semibold text-white mb-2">Setting Up...</h3>
-              <p className="text-gray-400">This may take a few minutes.</p>
-              <div className="mt-6 text-left space-y-2">
-                {['Cloning Supabase repository...', 'Preparing environment...', 'Generating secrets...', 'Starting services...'].map((step, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm text-gray-400">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>{step}</span>
-                  </div>
-                ))}
+              <h3 className="text-xl font-semibold text-white mb-2">Setting Up Your Stack...</h3>
+
+              <div className="flex items-center justify-center gap-2 text-gray-400 mb-4">
+                <Clock className="w-4 h-4" />
+                <span>Elapsed: {formatTime(elapsedTime)}</span>
               </div>
+
+              <p className="text-gray-400 mb-2">This typically takes 2-5 minutes.</p>
+              <p className="text-sm text-gray-500 mb-6">
+                We're downloading dependencies, configuring services, and starting containers.
+              </p>
+
+              <div className="mt-4 text-left space-y-3 max-w-md mx-auto">
+                {[
+                  { step: 'clone_supabase', label: 'Cloning Supabase repository', desc: 'Downloading backend services' },
+                  { step: 'prepare_env', label: 'Preparing environment', desc: 'Configuring secrets and settings' },
+                  { step: 'searxng_secret', label: 'Configuring SearXNG', desc: 'Setting up search engine' },
+                  { step: 'start_stack', label: 'Starting services', desc: 'Launching Docker containers (this takes the longest)' },
+                ].map((item, i) => {
+                  const stepResult = setupResult?.steps?.find(s => s.step === item.step);
+                  const isComplete = stepResult?.status === 'completed';
+                  const isFailed = stepResult?.status === 'failed';
+                  const isActive = !stepResult && i === (setupResult?.steps?.length || 0);
+
+                  return (
+                    <div key={item.step} className={`flex items-start gap-3 p-2 rounded ${isActive ? 'bg-blue-900/20' : ''}`}>
+                      <div className="mt-0.5">
+                        {isComplete ? (
+                          <Check className="w-5 h-5 text-green-400" />
+                        ) : isFailed ? (
+                          <AlertCircle className="w-5 h-5 text-red-400" />
+                        ) : isActive ? (
+                          <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border-2 border-gray-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-medium ${isComplete ? 'text-green-400' : isFailed ? 'text-red-400' : isActive ? 'text-blue-400' : 'text-gray-500'}`}>
+                          {item.label}
+                        </p>
+                        <p className="text-xs text-gray-500">{item.desc}</p>
+                        {stepResult?.message && (
+                          <p className="text-xs text-gray-400 mt-1">{stepResult.message}</p>
+                        )}
+                        {stepResult?.error && (
+                          <p className="text-xs text-red-400 mt-1">{stepResult.error}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {elapsedTime > 300 && (
+                <p className="text-yellow-400 text-sm mt-6">
+                  This is taking longer than expected. Check your Docker installation and network connection.
+                </p>
+              )}
             </>
           )}
         </Card>
