@@ -1,3 +1,4 @@
+.claude/
 .env
 volumes/
 shared/
@@ -6,3 +7,4 @@ shared-backup/
 .env.test
 searxng/settings.yml
 searxng/uwsgi*
+tmp/
