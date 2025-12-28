@@ -9,9 +9,9 @@ def generate_hex_key(bytes_length: int = 32) -> str:
 
 def generate_safe_password(length: int = 24) -> str:
     """Generate a secure password without problematic characters."""
-    # Avoid @, %, =, +, #, and other chars that can cause issues in .env files and connection strings
-    # # starts comments in .env files, = is the key-value delimiter
-    alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!$^&*-_"
+    # Only use alphanumeric and a few safe special chars
+    # Avoid: @ % = + # $ ! ^ & * (shell expansion, env parsing, URL encoding issues)
+    alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
     return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 def generate_supabase_jwt(role: str, jwt_secret: str) -> str:
