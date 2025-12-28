@@ -89,6 +89,15 @@ export const SetupWizard: React.FC = () => {
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+      setError(null); // Clear error when going back
+    }
+  };
+
+  const handleStepClick = (index: number) => {
+    // Only allow clicking on completed steps or the current step
+    if (index <= currentStep && !isSubmitting) {
+      setCurrentStep(index);
+      setError(null); // Clear error when navigating
     }
   };
 
@@ -280,11 +289,15 @@ export const SetupWizard: React.FC = () => {
       <div className="flex justify-center mb-8">
         {STEPS.map((step, index) => (
           <div key={step} className="flex items-center">
-            <div className="flex flex-col items-center">
+            <div
+              className="flex flex-col items-center"
+              onClick={() => handleStepClick(index)}
+              style={{ cursor: index <= currentStep ? 'pointer' : 'default' }}
+            >
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                   index < currentStep
-                    ? 'bg-green-600 text-white'
+                    ? 'bg-green-600 text-white hover:bg-green-500'
                     : index === currentStep
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-400'
@@ -297,7 +310,7 @@ export const SetupWizard: React.FC = () => {
                 )}
               </div>
               <span className={`text-xs mt-1 ${
-                index === currentStep ? 'text-white' : 'text-gray-500'
+                index === currentStep ? 'text-white' : index < currentStep ? 'text-green-400' : 'text-gray-500'
               }`}>
                 {STEP_LABELS[index]}
               </span>
