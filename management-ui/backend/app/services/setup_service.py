@@ -318,22 +318,28 @@ class SetupService:
                     })
 
         # Check for existing Supabase database data (password mismatch issue)
-        supabase_db_data = self.base_path / "supabase" / "docker" / "volumes" / "db" / "data"
-        if supabase_db_data.exists() and any(supabase_db_data.iterdir()):
-            warnings.append({
-                "type": "supabase_db_exists",
-                "message": "Supabase database data exists (may cause password mismatch)",
-                "fix": "delete_supabase_db"
-            })
+        try:
+            supabase_db_data = self.base_path / "supabase" / "docker" / "volumes" / "db" / "data"
+            if supabase_db_data.exists() and any(supabase_db_data.iterdir()):
+                warnings.append({
+                    "type": "supabase_db_exists",
+                    "message": "Supabase database data exists (may cause password mismatch)",
+                    "fix": "delete_supabase_db"
+                })
+        except (PermissionError, OSError):
+            pass  # Skip if we can't read the directory
 
         # Check for existing/stale supabase .env file
-        supabase_env = self.base_path / "supabase" / "docker" / ".env"
-        if supabase_env.exists():
-            warnings.append({
-                "type": "supabase_env_exists",
-                "message": "Supabase .env file exists (will be regenerated with fresh secrets)",
-                "fix": "delete_supabase_env"
-            })
+        try:
+            supabase_env = self.base_path / "supabase" / "docker" / ".env"
+            if supabase_env.exists():
+                warnings.append({
+                    "type": "supabase_env_exists",
+                    "message": "Supabase .env file exists (will be regenerated with fresh secrets)",
+                    "fix": "delete_supabase_env"
+                })
+        except (PermissionError, OSError):
+            pass
 
         # Check for running containers
         try:
