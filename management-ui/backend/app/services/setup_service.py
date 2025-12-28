@@ -310,6 +310,15 @@ class SetupService:
                 "fix": "delete_supabase_db"
             })
 
+        # Check for existing/stale supabase .env file
+        supabase_env = self.base_path / "supabase" / "docker" / ".env"
+        if supabase_env.exists():
+            warnings.append({
+                "type": "supabase_env_exists",
+                "message": "Supabase .env file exists (will be regenerated with fresh secrets)",
+                "fix": "delete_supabase_env"
+            })
+
         # Check for running containers
         try:
             containers = self.docker_client.list_containers()
@@ -374,6 +383,12 @@ class SetupService:
                 if supabase_db_data.exists():
                     shutil.rmtree(supabase_db_data)
                 return {"success": True, "message": "Deleted Supabase database data"}
+
+            elif fix_type == "delete_supabase_env":
+                supabase_env = self.base_path / "supabase" / "docker" / ".env"
+                if supabase_env.exists():
+                    supabase_env.unlink()
+                return {"success": True, "message": "Deleted Supabase .env file (will be regenerated)"}
 
             else:
                 return {"success": False, "message": f"Unknown fix type: {fix_type}"}

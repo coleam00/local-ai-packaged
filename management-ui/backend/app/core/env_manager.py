@@ -98,21 +98,33 @@ class EnvManager:
         self.env_example = self.base_path / ".env.example"
         self.backup_dir = self.base_path / ".env_backups"
 
-    def load(self) -> Dict[str, str]:
-        """Load current .env file."""
-        if not self.env_file.exists():
+    def _parse_env_file(self, file_path: Path) -> Dict[str, str]:
+        """Parse an env file, handling different line endings."""
+        if not file_path.exists():
             return {}
 
         env = {}
-        with open(self.env_file, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-                if '=' in line:
-                    key, _, value = line.partition('=')
-                    env[key.strip()] = value.strip()
+        # Read with explicit encoding and normalize line endings
+        content = file_path.read_text(encoding='utf-8', errors='replace')
+        # Normalize line endings (handle Windows CRLF)
+        content = content.replace('\r\n', '\n').replace('\r', '\n')
+
+        for line in content.split('\n'):
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            if '=' in line:
+                key, _, value = line.partition('=')
+                key = key.strip()
+                value = value.strip()
+                # Skip if key looks corrupted (should start with letter/underscore)
+                if key and (key[0].isalpha() or key[0] == '_'):
+                    env[key] = value
         return env
+
+    def load(self) -> Dict[str, str]:
+        """Load current .env file."""
+        return self._parse_env_file(self.env_file)
 
     def save(self, env: Dict[str, str], backup: bool = True) -> str:
         """Save .env file with optional backup. Returns backup path if created."""
@@ -125,26 +137,29 @@ class EnvManager:
         written_keys = set()
 
         if self.env_example.exists():
-            with open(self.env_example, 'r') as f:
-                for line in f:
-                    stripped = line.strip()
-                    if '=' in stripped and not stripped.startswith('#'):
-                        key = stripped.split('=')[0].strip()
-                        if key in env:
-                            lines.append(f"{key}={env[key]}\n")
-                            written_keys.add(key)
-                        else:
-                            lines.append(line)
+            # Read with proper encoding and normalize line endings
+            content = self.env_example.read_text(encoding='utf-8', errors='replace')
+            content = content.replace('\r\n', '\n').replace('\r', '\n')
+
+            for line in content.split('\n'):
+                stripped = line.strip()
+                if '=' in stripped and not stripped.startswith('#'):
+                    key = stripped.split('=')[0].strip()
+                    if key in env:
+                        lines.append(f"{key}={env[key]}\n")
+                        written_keys.add(key)
                     else:
-                        lines.append(line)
+                        lines.append(line + '\n')
+                else:
+                    lines.append(line + '\n')
 
         # Add any remaining new variables
         for key, value in env.items():
             if key not in written_keys:
                 lines.append(f"{key}={value}\n")
 
-        with open(self.env_file, 'w') as f:
-            f.writelines(lines)
+        # Write with Unix line endings
+        self.env_file.write_text(''.join(lines), encoding='utf-8', newline='\n')
 
         # Copy to Supabase directory
         self._sync_to_supabase()
@@ -161,25 +176,15 @@ class EnvManager:
             return
 
         # Start with Supabase's .env.example as base (contains all required Supabase vars)
-        supabase_vars = {}
-        if supabase_example.exists():
-            with open(supabase_example, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith('#'):
-                        continue
-                    if '=' in line:
-                        key, _, value = line.partition('=')
-                        supabase_vars[key.strip()] = value.strip()
+        supabase_vars = self._parse_env_file(supabase_example)
 
         # Overlay our root .env values (overrides Supabase defaults with our secrets)
         root_vars = self.load()
         supabase_vars.update(root_vars)
 
-        # Write merged config to supabase/docker/.env
-        with open(supabase_env, 'w') as f:
-            for key, value in supabase_vars.items():
-                f.write(f"{key}={value}\n")
+        # Write merged config to supabase/docker/.env with Unix line endings
+        lines = [f"{key}={value}\n" for key, value in supabase_vars.items()]
+        supabase_env.write_text(''.join(lines), encoding='utf-8', newline='\n')
 
     def validate(self, env: Dict[str, str]) -> List[Dict]:
         """Validate environment variables against schema."""

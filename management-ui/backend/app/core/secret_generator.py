@@ -39,6 +39,7 @@ def generate_all_secrets() -> Dict[str, str]:
         "SERVICE_ROLE_KEY": generate_supabase_jwt("service_role", jwt_secret),
         "SECRET_KEY_BASE": generate_hex_key(32),
         "VAULT_ENC_KEY": generate_safe_password(32),
+        "PG_META_CRYPTO_KEY": generate_safe_password(32),
 
         # Supabase dashboard
         "DASHBOARD_USERNAME": "admin",
