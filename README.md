@@ -301,6 +301,34 @@ language model and Qdrant as your vector store.
 > combines robust components that work well together for proof-of-concept
 > projects. You can customize it to meet your specific needs
 
+## Management UI (Optional)
+
+The project includes an optional web-based Management UI that provides a visual interface for managing your Local AI stack. It offers:
+
+- Service status monitoring and control (start/stop/restart containers)
+- Environment variable management with a user-friendly editor
+- Setup wizard for initial configuration
+- Container logs viewer
+
+### Running the Management UI
+
+Build and start the management UI alongside your existing services:
+
+```bash
+docker compose -f docker-compose.management.yml up -d --build
+```
+
+Once running, access the Management UI at <http://localhost:9000/>
+
+### Stopping the Management UI
+
+```bash
+docker compose -f docker-compose.management.yml down
+```
+
+> [!NOTE]
+> The Management UI runs independently from the main services and can be started/stopped without affecting your AI stack. It requires access to the Docker socket to manage containers.
+
 ## Upgrading
 
 To update all containers to their latest versions (n8n, Open WebUI, etc.), run these commands:
