@@ -201,6 +201,28 @@ class DependencyGraph:
         """Get centralized config for a service."""
         return SERVICE_CONFIGS.get(service_name)
 
+    def _is_available_for_profile(self, config, profile: str) -> bool:
+        """Check if a service is available for the given profile."""
+        # Ollama variants - only available for their matching profile
+        ollama_mapping = {
+            "ollama-cpu": "cpu",
+            "ollama-gpu": "gpu-nvidia",
+            "ollama-gpu-amd": "gpu-amd"
+        }
+
+        if config.name in ollama_mapping:
+            # Ollama services are only available for their specific profile
+            # "none" profile means no Ollama at all
+            return ollama_mapping[config.name] == profile
+
+        # For non-Ollama services:
+        # - If no profile restriction, available for all including "none"
+        # - If has profile restriction, check if current profile matches
+        if not config.profiles:
+            return True
+
+        return profile in config.profiles
+
     def get_enhanced_service_info(self, service_name: str, profile: str) -> Optional[Dict]:
         """Get service info combining docker-compose and centralized config."""
         compose_def = self.services.get(service_name)
@@ -219,10 +241,8 @@ class DependencyGraph:
             "default_enabled": central_config.default_enabled if central_config else True,
             "profiles": central_config.profiles if central_config else compose_def.profiles,
             "category": central_config.category if central_config else "optional",
-            "available_for_profile": (
-                not central_config.profiles or
-                profile in central_config.profiles or
-                profile == "none"
+            "available_for_profile": self._is_available_for_profile(
+                central_config, profile
             ) if central_config else True
         }
 
