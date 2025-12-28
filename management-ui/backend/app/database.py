@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import sessionmaker, declarative_base
 from .config import settings
 import os
@@ -31,3 +31,20 @@ def get_db():
 def init_db():
     """Create all tables."""
     Base.metadata.create_all(bind=engine)
+    # Run migrations for existing databases
+    run_migrations()
+
+
+def run_migrations():
+    """Run database migrations for schema changes."""
+    inspector = inspect(engine)
+
+    # Migration: Add port_overrides_json column to stack_config
+    if 'stack_config' in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('stack_config')]
+        if 'port_overrides_json' not in columns:
+            with engine.connect() as conn:
+                conn.execute(text(
+                    "ALTER TABLE stack_config ADD COLUMN port_overrides_json TEXT DEFAULT '{}'"
+                ))
+                conn.commit()
