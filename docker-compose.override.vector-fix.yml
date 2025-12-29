@@ -1,0 +1,16 @@
+# Fix for Windows Docker Desktop bug where bind-mounted files appear as directories
+# This override uses Docker configs instead of bind mount for vector.yml
+
+configs:
+  vector_config:
+    file: ./supabase/docker/volumes/logs/vector.yml
+
+services:
+  vector:
+    volumes:
+      # Remove the vector.yml bind mount by overriding with just the docker socket
+      - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
+    configs:
+      - source: vector_config
+        target: /etc/vector/vector.yml
+        mode: 0444

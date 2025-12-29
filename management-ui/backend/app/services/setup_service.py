@@ -860,7 +860,8 @@ class SetupService:
             # Start Supabase
             supabase_cmd = [
                 "docker", "compose", "-p", "localai",
-                "-f", "supabase/docker/docker-compose.yml"
+                "-f", "supabase/docker/docker-compose.yml",
+                "-f", "docker-compose.override.vector-fix.yml"  # Fix Windows bind mount bug
             ]
             if environment == "public":
                 supabase_cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])

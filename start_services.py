@@ -57,7 +57,11 @@ def stop_existing_containers(profile=None):
 def start_supabase(environment=None):
     """Start the Supabase services (using its compose file)."""
     print("Starting Supabase services...")
-    cmd = ["docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml"]
+    cmd = [
+        "docker", "compose", "-p", "localai",
+        "-f", "supabase/docker/docker-compose.yml",
+        "-f", "docker-compose.override.vector-fix.yml"  # Fix Windows bind mount bug
+    ]
     if environment and environment == "public":
         cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])
     cmd.extend(["up", "-d"])
