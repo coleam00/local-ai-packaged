@@ -1,10 +1,12 @@
 # Fix for Windows Docker Desktop bug where bind-mounted files appear as directories
 # This override replaces the vector.yml bind mount with our own file from project root
 # Docker Compose replaces volumes with matching target paths (not merge)
+# NOTE: Path is relative to FIRST compose file (supabase/docker/), so we go up two levels
 
 services:
   vector:
     volumes:
       # Same target path as original - this REPLACES the supabase bind mount
-      - ./vector.yml:/etc/vector/vector.yml:ro
+      # ../../ goes from supabase/docker/ back to project root
+      - ../../vector.yml:/etc/vector/vector.yml:ro
       - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
