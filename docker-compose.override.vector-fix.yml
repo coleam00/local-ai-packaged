@@ -1,23 +1,24 @@
 # Fix for Windows Docker Desktop bug where bind-mounted files appear as directories
-# Use entrypoint to create config file inside container, bypassing bind mount entirely
+#
+# The Windows Docker Desktop WSL2 backend has a bug where bind-mounted files can be
+# mounted as directories inside containers (GitHub issues #9823, #13947).
+#
+# This override completely bypasses the problematic bind mount by:
+# 1. Writing the vector config to /tmp/vector/vector.yml (not affected by bind mount)
+# 2. Running vector with --config pointing to the /tmp location
+#
+# The original bind mount at /etc/vector/vector.yml can fail or create a directory,
+# but it won't affect vector because we use a completely different config path.
 
 services:
   vector:
-    # Replace original vector.yml mount with same target path + entrypoint to fix
-    volumes:
-      # Same target path as original - REPLACES the problematic mount
-      - ../../vector.yml:/etc/vector/vector.yml:rw
-      - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
-    # Fix mount if Docker created a directory, then create config
+    # Override entrypoint to create config at a different location
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        # If vector.yml is a directory (Windows Docker bug), remove it
-        if [ -d /etc/vector/vector.yml ]; then
-          rm -rf /etc/vector/vector.yml
-        fi
-        mkdir -p /etc/vector
-        cat > /etc/vector/vector.yml << 'VECTOREOF'
+        # Create config at /tmp/vector to bypass any bind mount issues
+        mkdir -p /tmp/vector
+        cat > /tmp/vector/vector.yml << 'VECTOREOF'
         api:
           enabled: true
           address: 0.0.0.0:9001
@@ -256,4 +257,5 @@ services:
                 x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
             uri: 'http://analytics:4000/api/logs?source_name=cloudflare.logs.prod'
         VECTOREOF
-        exec vector --config /etc/vector/vector.yml
+        # Run vector with our config at /tmp, bypassing the problematic bind mount
+        exec vector --config /tmp/vector/vector.yml
