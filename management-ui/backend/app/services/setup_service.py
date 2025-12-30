@@ -565,16 +565,35 @@ class SetupService:
                     })
 
         # Check for existing Supabase database data (password mismatch issue)
+        # This is a BLOCKING issue because regenerating secrets will cause password mismatch
         try:
             supabase_db_data = self.base_path / "supabase" / "docker" / "volumes" / "db" / "data"
             if supabase_db_data.exists() and any(supabase_db_data.iterdir()):
-                warnings.append({
+                issues.append({
                     "type": "supabase_db_exists",
-                    "message": "Supabase database data exists (may cause password mismatch)",
+                    "message": "Existing database found - must delete to avoid password mismatch",
                     "fix": "delete_supabase_db"
                 })
+                can_proceed = False
         except (PermissionError, OSError):
             pass  # Skip if we can't read the directory
+
+        # Also check for Docker named volumes that might contain database data
+        try:
+            result = subprocess.run(
+                ["docker", "volume", "ls", "-q", "--filter", "name=db"],
+                capture_output=True, text=True
+            )
+            db_volumes = [v for v in result.stdout.strip().split("\n") if v and "db" in v.lower()]
+            if db_volumes:
+                issues.append({
+                    "type": "docker_db_volumes_exist",
+                    "message": f"Docker database volumes exist: {', '.join(db_volumes[:3])}",
+                    "fix": "delete_db_volumes"
+                })
+                can_proceed = False
+        except Exception:
+            pass
 
         # Check for existing/stale supabase .env file
         try:
@@ -661,10 +680,36 @@ class SetupService:
                 return {"success": True, "message": "Deleted Docker volumes"}
 
             elif fix_type == "delete_supabase_db":
+                deleted = []
+                # First stop all containers so we can delete volumes
+                subprocess.run(
+                    ["docker", "compose", "-p", "localai", "down"],
+                    capture_output=True, cwd=self.base_path
+                )
+                # Delete bind mount data
                 supabase_db_data = self.base_path / "supabase" / "docker" / "volumes" / "db" / "data"
                 if supabase_db_data.exists():
                     shutil.rmtree(supabase_db_data)
-                return {"success": True, "message": "Deleted Supabase database data"}
+                    deleted.append("bind mount data")
+                # Also delete any Docker volumes with db in the name
+                result = subprocess.run(
+                    ["docker", "volume", "ls", "-q"],
+                    capture_output=True, text=True
+                )
+                all_volumes = [v for v in result.stdout.strip().split("\n") if v]
+                db_volumes = [v for v in all_volumes if "db" in v.lower() or "postgres" in v.lower()]
+                if db_volumes:
+                    rm_result = subprocess.run(
+                        ["docker", "volume", "rm", "-f"] + db_volumes,
+                        capture_output=True, text=True
+                    )
+                    if rm_result.returncode == 0:
+                        deleted.append(f"{len(db_volumes)} Docker volume(s)")
+                    else:
+                        deleted.append(f"tried to delete volumes but got: {rm_result.stderr[:100]}")
+                if deleted:
+                    return {"success": True, "message": f"Deleted: {', '.join(deleted)}"}
+                return {"success": True, "message": "No database data found to delete"}
 
             elif fix_type == "delete_supabase_env":
                 supabase_env = self.base_path / "supabase" / "docker" / ".env"
@@ -682,6 +727,20 @@ class SetupService:
                 if supabase_dir.exists():
                     shutil.rmtree(supabase_dir)
                 return {"success": True, "message": "Fixed vector.yml and deleted supabase folder (will re-clone)"}
+
+            elif fix_type == "delete_db_volumes":
+                # Delete Docker volumes that contain database data
+                result = subprocess.run(
+                    ["docker", "volume", "ls", "-q", "--filter", "name=db"],
+                    capture_output=True, text=True
+                )
+                db_volumes = [v for v in result.stdout.strip().split("\n") if v and "db" in v.lower()]
+                if db_volumes:
+                    subprocess.run(
+                        ["docker", "volume", "rm", "-f"] + db_volumes,
+                        capture_output=True
+                    )
+                return {"success": True, "message": f"Deleted {len(db_volumes)} database volume(s)"}
 
             else:
                 return {"success": False, "message": f"Unknown fix type: {fix_type}"}
