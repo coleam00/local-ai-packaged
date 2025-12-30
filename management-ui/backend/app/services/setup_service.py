@@ -915,56 +915,32 @@ class SetupService:
         environment: str,
         enabled_services: Optional[List[str]] = None
     ) -> SetupStepResult:
-        """Start the full stack."""
+        """Start the full stack by calling start_services.py.
+
+        This delegates to start_services.py which handles all the complexity of:
+        - Cloning/updating supabase repo
+        - Copying .env to supabase/docker/.env
+        - Generating SearXNG secret
+        - Starting Supabase first, waiting, then starting local AI services
+        - Handling the vector.yml Windows Docker bug
+
+        Using start_services.py ensures consistency between CLI and UI startup.
+        """
         try:
-            # Stop existing containers first
-            self.docker_client.compose_down(profile=profile)
-
-            # CRITICAL: Copy root .env to supabase/docker/.env
-            # Supabase docker-compose reads from supabase/docker/.env, not root .env
-            root_env = self.base_path / ".env"
-            supabase_env = self.base_path / "supabase" / "docker" / ".env"
-            if root_env.exists():
-                shutil.copy(root_env, supabase_env)
-
-            # Start Supabase
-            supabase_cmd = [
-                "docker", "compose", "-p", "localai",
-                "-f", "supabase/docker/docker-compose.yml",
-                "-f", "docker-compose.override.vector-fix.yml"  # Fix Windows bind mount bug
+            # Build command to call start_services.py
+            cmd = [
+                "python", "start_services.py",
+                "--profile", profile,
+                "--environment", environment
             ]
-            if environment == "public":
-                supabase_cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])
-            supabase_cmd.extend(["up", "-d"])
 
-            # Fix vector.yml if it's a directory (Windows Docker bug)
-            vector_yml = self.base_path / "supabase" / "docker" / "volumes" / "logs" / "vector.yml"
-            if vector_yml.exists() and vector_yml.is_dir():
-                shutil.rmtree(vector_yml)
-
-            # Create vector.yml if it doesn't exist (needed for Windows Docker)
-            if not vector_yml.exists():
-                vector_yml.parent.mkdir(parents=True, exist_ok=True)
-                vector_yml.write_text(VECTOR_YML_CONTENT, encoding='utf-8')
-
-            result = subprocess.run(supabase_cmd, cwd=self.base_path, capture_output=True, text=True)
-            if result.returncode != 0:
-                raw_error = result.stderr or result.stdout or "Unknown error"
-                formatted_error = _format_docker_error(raw_error)
-                return SetupStepResult(
-                    step="start_stack",
-                    status="failed",
-                    error=f"Failed to start Supabase:\n\n{formatted_error}"
-                )
-
-            # Wait for Supabase to be ready
-            await asyncio.sleep(10)
-
-            # Start local AI services
-            result = self.docker_client.compose_up(
-                services=enabled_services,
-                profile=profile,
-                environment=environment
+            # Run start_services.py and capture output
+            result = subprocess.run(
+                cmd,
+                cwd=self.base_path,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout for startup
             )
 
             if result.returncode == 0:
@@ -974,14 +950,21 @@ class SetupService:
                     message="Stack started successfully"
                 )
             else:
-                raw_error = result.stderr or result.stdout or "Unknown error"
-                formatted_error = _format_docker_error(raw_error)
+                # Format the error output
+                error_output = result.stderr or result.stdout or "Unknown error"
+                formatted_error = _format_docker_error(error_output)
                 return SetupStepResult(
                     step="start_stack",
                     status="failed",
-                    error=f"Failed to start local AI services:\n\n{formatted_error}"
+                    error=f"Failed to start stack:\n\n{formatted_error}"
                 )
 
+        except subprocess.TimeoutExpired:
+            return SetupStepResult(
+                step="start_stack",
+                status="failed",
+                error="Stack startup timed out after 5 minutes"
+            )
         except Exception as e:
             return SetupStepResult(
                 step="start_stack",
