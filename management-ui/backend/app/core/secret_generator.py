@@ -64,6 +64,71 @@ def generate_all_secrets() -> Dict[str, str]:
         "LOGFLARE_PRIVATE_ACCESS_TOKEN": generate_hex_key(32),
     }
 
+def get_required_defaults() -> Dict[str, str]:
+    """Get required configuration defaults (non-secret values).
+
+    These are values that Supabase docker-compose.yml requires but are not secrets.
+    Without these, services like analytics won't know how to connect to the database.
+    """
+    return {
+        # Database connection (required for analytics, etc.)
+        "POSTGRES_HOST": "db",
+        "POSTGRES_DB": "postgres",
+        "POSTGRES_PORT": "5432",
+
+        # Docker socket location
+        "DOCKER_SOCKET_LOCATION": "/var/run/docker.sock",
+
+        # Supabase pooler settings
+        "POOLER_PROXY_PORT_TRANSACTION": "6543",
+        "POOLER_DEFAULT_POOL_SIZE": "20",
+        "POOLER_MAX_CLIENT_CONN": "100",
+        "POOLER_DB_POOL_SIZE": "5",
+
+        # Kong ports
+        "KONG_HTTP_PORT": "8000",
+        "KONG_HTTPS_PORT": "8443",
+
+        # PostgREST
+        "PGRST_DB_SCHEMAS": "public,storage,graphql_public",
+
+        # Auth defaults
+        "SITE_URL": "http://localhost:3000",
+        "API_EXTERNAL_URL": "http://localhost:8000",
+        "ADDITIONAL_REDIRECT_URLS": "",
+        "JWT_EXPIRY": "3600",
+        "DISABLE_SIGNUP": "false",
+        "ENABLE_EMAIL_SIGNUP": "true",
+        "ENABLE_EMAIL_AUTOCONFIRM": "true",
+        "ENABLE_PHONE_SIGNUP": "true",
+        "ENABLE_PHONE_AUTOCONFIRM": "true",
+        "ENABLE_ANONYMOUS_USERS": "false",
+
+        # SMTP defaults (local mail container)
+        "SMTP_ADMIN_EMAIL": "admin@example.com",
+        "SMTP_HOST": "supabase-mail",
+        "SMTP_PORT": "2500",
+        "SMTP_USER": "fake_mail_user",
+        "SMTP_PASS": "fake_mail_password",
+        "SMTP_SENDER_NAME": "fake_sender",
+
+        # Mailer paths
+        "MAILER_URLPATHS_CONFIRMATION": "/auth/v1/verify",
+        "MAILER_URLPATHS_INVITE": "/auth/v1/verify",
+        "MAILER_URLPATHS_RECOVERY": "/auth/v1/verify",
+        "MAILER_URLPATHS_EMAIL_CHANGE": "/auth/v1/verify",
+
+        # Studio
+        "STUDIO_DEFAULT_ORGANIZATION": "Default Organization",
+        "STUDIO_DEFAULT_PROJECT": "Default Project",
+        "SUPABASE_PUBLIC_URL": "http://localhost:8000",
+        "IMGPROXY_ENABLE_WEBP_DETECTION": "true",
+
+        # Functions
+        "FUNCTIONS_VERIFY_JWT": "false",
+    }
+
+
 def generate_missing_secrets(current_env: Dict[str, str]) -> Dict[str, str]:
     """Generate only the secrets that are missing or have placeholder values."""
     all_secrets = generate_all_secrets()
@@ -79,5 +144,17 @@ def generate_missing_secrets(current_env: Dict[str, str]) -> Dict[str, str]:
 
         if not current_value or is_placeholder:
             result[key] = new_value
+
+    return result
+
+
+def apply_required_defaults(current_env: Dict[str, str]) -> Dict[str, str]:
+    """Apply required defaults only if they're missing from the env."""
+    defaults = get_required_defaults()
+    result = {}
+
+    for key, default_value in defaults.items():
+        if key not in current_env or not current_env[key]:
+            result[key] = default_value
 
     return result

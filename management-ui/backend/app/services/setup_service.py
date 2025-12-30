@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Optional
 from ..core.docker_client import DockerClient
 from ..core.env_manager import EnvManager
-from ..core.secret_generator import generate_missing_secrets
+from ..core.secret_generator import generate_missing_secrets, apply_required_defaults
 from ..core.compose_parser import ComposeParser
 from ..core.dependency_graph import DependencyGraph
 from ..schemas.setup import (
@@ -825,6 +825,10 @@ class SetupService:
             # Generate any missing secrets
             missing = generate_missing_secrets(env)
             env.update(missing)
+
+            # Apply required defaults (non-secret config values like POSTGRES_HOST)
+            defaults = apply_required_defaults(env)
+            env.update(defaults)
 
             # Apply hostnames if public environment
             if config.environment.value == "public":
