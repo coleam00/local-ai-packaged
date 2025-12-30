@@ -920,6 +920,13 @@ class SetupService:
             # Stop existing containers first
             self.docker_client.compose_down(profile=profile)
 
+            # CRITICAL: Copy root .env to supabase/docker/.env
+            # Supabase docker-compose reads from supabase/docker/.env, not root .env
+            root_env = self.base_path / ".env"
+            supabase_env = self.base_path / "supabase" / "docker" / ".env"
+            if root_env.exists():
+                shutil.copy(root_env, supabase_env)
+
             # Start Supabase
             supabase_cmd = [
                 "docker", "compose", "-p", "localai",
