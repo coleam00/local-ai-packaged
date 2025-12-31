@@ -107,6 +107,19 @@ def get_docker_resources() -> Tuple[List, List, List, List]:
         except Exception:
             pass
 
+    # Also find dangling anonymous volumes (not currently attached to containers)
+    # These can be left behind when containers are removed
+    try:
+        all_volumes = client.volumes.list()
+        for vol in all_volumes:
+            # Check if it's an anonymous volume (64-char hex name)
+            if (len(vol.name) == 64 and
+                all(c in '0123456789abcdef' for c in vol.name) and
+                vol.attrs.get('Labels', {}).get('com.docker.volume.anonymous') == ''):
+                anonymous_volumes.append(vol)
+    except Exception:
+        pass
+
     # Deduplicate anonymous volumes
     anonymous_volumes = list({v.name: v for v in anonymous_volumes}.values())
 
