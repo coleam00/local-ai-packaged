@@ -20,6 +20,20 @@ def run_command(cmd, cwd=None):
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, cwd=cwd, check=True)
 
+def ensure_supabase_directories():
+    """Create required Supabase bind mount directories to prevent anonymous volumes."""
+    print("Ensuring Supabase bind mount directories exist...")
+
+    required_dirs = [
+        os.path.join("supabase", "docker", "volumes", "db", "data"),
+        os.path.join("supabase", "docker", "volumes", "storage"),
+        os.path.join("supabase", "docker", "volumes", "logs"),
+    ]
+
+    for dir_path in required_dirs:
+        os.makedirs(dir_path, exist_ok=True)
+        print(f"  Ensured: {dir_path}")
+
 def clone_supabase_repo():
     """Clone the Supabase repository using sparse checkout if not already present."""
     if not os.path.exists("supabase"):
@@ -38,6 +52,9 @@ def clone_supabase_repo():
         os.chdir("supabase")
         run_command(["git", "pull"])
         os.chdir("..")
+
+    # Ensure bind mount directories exist to prevent Docker from creating anonymous volumes
+    ensure_supabase_directories()
 
 def prepare_supabase_env():
     """Copy .env to .env in supabase/docker."""

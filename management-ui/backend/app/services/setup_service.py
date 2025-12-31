@@ -595,6 +595,46 @@ class SetupService:
         except Exception:
             pass
 
+        # Check for anonymous Docker volumes (created when bind mounts fail)
+        try:
+            import docker
+            client = docker.from_env()
+
+            # Get project containers
+            project_containers = client.containers.list(
+                all=True,
+                filters={"label": "com.docker.compose.project=localai"}
+            )
+
+            # Find anonymous volumes attached to project containers
+            anonymous_volumes = []
+            for container in project_containers:
+                try:
+                    container.reload()
+                    mounts = container.attrs.get('Mounts', [])
+                    for mount in mounts:
+                        if mount.get('Type') == 'volume':
+                            vol_name = mount.get('Name')
+                            # Anonymous volumes are 64-char hex strings
+                            if vol_name and len(vol_name) == 64:
+                                if all(c in '0123456789abcdef' for c in vol_name):
+                                    anonymous_volumes.append(vol_name)
+                except Exception:
+                    pass
+
+            # Deduplicate
+            anonymous_volumes = list(set(anonymous_volumes))
+
+            if anonymous_volumes:
+                issues.append({
+                    "type": "anonymous_volumes_exist",
+                    "message": f"Found {len(anonymous_volumes)} anonymous Docker volume(s) containing stale database data. These must be removed before setup.",
+                    "fix": "delete_anonymous_volumes"
+                })
+                can_proceed = False
+        except Exception:
+            pass  # Docker not available
+
         # Check for existing/stale supabase .env file
         try:
             supabase_env = self.base_path / "supabase" / "docker" / ".env"
@@ -741,6 +781,50 @@ class SetupService:
                         capture_output=True
                     )
                 return {"success": True, "message": f"Deleted {len(db_volumes)} database volume(s)"}
+
+            elif fix_type == "delete_anonymous_volumes":
+                # Delete anonymous volumes
+                try:
+                    import docker
+                    client = docker.from_env()
+
+                    # Stop containers first
+                    subprocess.run(
+                        ["docker", "compose", "-p", "localai", "down"],
+                        capture_output=True, cwd=self.base_path
+                    )
+
+                    # Find and remove anonymous volumes attached to project
+                    project_containers = client.containers.list(
+                        all=True,
+                        filters={"label": "com.docker.compose.project=localai"}
+                    )
+
+                    deleted_count = 0
+                    for container in project_containers:
+                        try:
+                            container.reload()
+                            mounts = container.attrs.get('Mounts', [])
+                            for mount in mounts:
+                                if mount.get('Type') == 'volume':
+                                    vol_name = mount.get('Name')
+                                    if vol_name and len(vol_name) == 64:
+                                        if all(c in '0123456789abcdef' for c in vol_name):
+                                            try:
+                                                vol = client.volumes.get(vol_name)
+                                                vol.remove(force=True)
+                                                deleted_count += 1
+                                            except:
+                                                pass
+                        except Exception:
+                            pass
+
+                    return {
+                        "success": True,
+                        "message": f"Deleted {deleted_count} anonymous volume(s)"
+                    }
+                except Exception as e:
+                    return {"success": False, "message": str(e)}
 
             else:
                 return {"success": False, "message": f"Unknown fix type: {fix_type}"}

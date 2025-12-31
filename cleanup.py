@@ -54,10 +54,10 @@ def get_files_to_remove(preserve_env: bool = False) -> List[str]:
     # Only return files that actually exist
     return [f for f in files if os.path.exists(f)]
 
-def get_docker_resources() -> Tuple[List, List, List]:
+def get_docker_resources() -> Tuple[List, List, List, List]:
     """
     Get all Docker resources belonging to this project.
-    Returns: (containers, volumes, networks)
+    Returns: (containers, named_volumes, networks, anonymous_volumes)
     """
     try:
         client = docker.from_env()
@@ -85,7 +85,32 @@ def get_docker_resources() -> Tuple[List, List, List]:
            project_label in [f"{k}={v}" for k, v in n.attrs.get("Labels", {}).items()]
     ]
 
-    return containers, volumes, networks
+    # Find anonymous volumes attached to project containers
+    anonymous_volumes = []
+    for container in containers:
+        try:
+            # Get container details to inspect mounts
+            container.reload()
+            mounts = container.attrs.get('Mounts', [])
+
+            for mount in mounts:
+                if mount.get('Type') == 'volume':
+                    vol_name = mount.get('Name')
+                    # Anonymous volumes are 64-char hex strings
+                    if vol_name and len(vol_name) == 64:
+                        if all(c in '0123456789abcdef' for c in vol_name):
+                            try:
+                                vol = client.volumes.get(vol_name)
+                                anonymous_volumes.append(vol)
+                            except:
+                                pass
+        except Exception:
+            pass
+
+    # Deduplicate anonymous volumes
+    anonymous_volumes = list({v.name: v for v in anonymous_volumes}.values())
+
+    return containers, volumes, networks, anonymous_volumes
 
 def preview_cleanup(preserve_env: bool = False) -> bool:
     """
@@ -96,7 +121,7 @@ def preview_cleanup(preserve_env: bool = False) -> bool:
     has_items = False
 
     # Docker resources
-    containers, volumes, networks = get_docker_resources()
+    containers, volumes, networks, anonymous_volumes = get_docker_resources()
 
     if containers:
         has_items = True
@@ -115,6 +140,13 @@ def preview_cleanup(preserve_env: bool = False) -> bool:
         print("\nDocker Networks (will be removed):")
         for n in networks:
             print_item(n.name)
+
+    if anonymous_volumes:
+        has_items = True
+        print("\nAnonymous Docker Volumes (created when bind mounts failed):")
+        for v in anonymous_volumes:
+            print_item(f"{v.name[:12]}... (full: {v.name})")
+        print("  These will be removed to prevent database persistence issues.")
 
     # Directories
     dirs = get_directories_to_remove()
@@ -144,7 +176,7 @@ def cleanup_docker_resources(dry_run: bool = False) -> None:
     """Stop and remove all Docker resources for this project."""
     print_header("Cleaning Docker Resources")
 
-    containers, volumes, networks = get_docker_resources()
+    containers, volumes, networks, anonymous_volumes = get_docker_resources()
 
     # Stop and remove containers
     if containers:
@@ -191,6 +223,19 @@ def cleanup_docker_resources(dry_run: bool = False) -> None:
                     print_item(f"Would remove: {network.name}")
             except Exception as e:
                 print(f"    Error with network {network.name}: {e}")
+
+    # Remove anonymous volumes
+    if anonymous_volumes:
+        print(f"\nRemoving {len(anonymous_volumes)} anonymous volume(s)...")
+        for volume in anonymous_volumes:
+            try:
+                if not dry_run:
+                    print_item(f"Removing {volume.name[:12]}...")
+                    volume.remove(force=True)
+                else:
+                    print_item(f"Would remove: {volume.name[:12]}...")
+            except Exception as e:
+                print(f"    Error with volume {volume.name[:12]}: {e}")
 
 def handle_remove_readonly(func, path, exc_info):
     """
