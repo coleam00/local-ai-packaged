@@ -9,6 +9,7 @@ import {
   Box,
   Activity,
 } from 'lucide-react';
+import { VERSION } from '../../version';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -65,7 +66,7 @@ export const Sidebar: React.FC = () => {
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
             <span>System Online</span>
           </div>
-          <span>v1.0.0</span>
+          <span>v{VERSION}</span>
         </div>
       </div>
     </aside>

@@ -12,6 +12,7 @@ import { Logs } from './pages/Logs';
 import { Health } from './pages/Health';
 import { SetupWizardPage } from './pages/SetupWizardPage';
 import { Loading } from './components/common/Loading';
+import './version'; // Import to trigger console log
 
 const App: React.FC = () => {
   const { checkAuth, checkSetupStatus, isLoading, setupRequired, stackConfigured } = useAuthStore();
