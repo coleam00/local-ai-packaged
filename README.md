@@ -348,6 +348,83 @@ Replace `<your-profile>` with one of: `cpu`, `gpu-nvidia`, `gpu-amd`, or `none`.
 
 Note: The `start_services.py` script itself does not update containers - it only restarts them or pulls them if you are downloading these containers for the first time. To get the latest versions, you must explicitly run the commands above.
 
+## Resetting to Clean State
+
+If you need to completely reset your local AI package to a clean state (remove all Docker containers, volumes, networks, and project files), you can use the included `cleanup.py` script.
+
+### Prerequisites
+
+The cleanup script requires the Docker SDK for Python:
+
+```bash
+pip install docker
+```
+
+### Usage
+
+The script provides several modes of operation:
+
+#### Preview what will be deleted (dry-run mode)
+
+```bash
+python cleanup.py --dry-run
+```
+
+This shows you exactly what will be removed without actually deleting anything. Always run this first to verify what will be cleaned up.
+
+#### Clean everything and preserve .env file (recommended)
+
+```bash
+python cleanup.py --preserve-env
+```
+
+This removes all project resources but keeps your `.env` configuration file so you can restart with the same settings.
+
+#### Clean everything and ask about .env (interactive)
+
+```bash
+python cleanup.py
+```
+
+This will prompt you to confirm deletion and ask whether you want to preserve the `.env` file.
+
+#### Force cleanup (delete everything including .env)
+
+```bash
+python cleanup.py --force
+```
+
+**WARNING**: This skips all confirmation prompts and deletes everything including your `.env` file. Use with caution.
+
+### What gets cleaned up
+
+The cleanup script removes:
+
+- All Docker containers with the `localai` project label
+- All Docker volumes with the `localai_` prefix
+- All Docker networks created by the project
+- Project directories: `supabase/`, `.env_backups/`, `.venv/`, `neo4j/` subdirectories
+- Configuration files: `searxng/settings.yml`
+- Optionally: `.env` file (based on your choice)
+
+The script preserves:
+- `management-ui/` directory (may contain custom work)
+- `tmp/` directory (may contain custom work)
+- Your code and configuration in the root directory
+
+### After cleanup
+
+Once cleanup is complete, you can start fresh:
+
+```bash
+# Copy your .env.example to .env (if you deleted .env)
+cp .env.example .env
+
+# Edit .env with your secrets
+# Then start services
+python start_services.py --profile <your-profile>
+```
+
 ## Troubleshooting
 
 Here are solutions to common issues you might encounter:
