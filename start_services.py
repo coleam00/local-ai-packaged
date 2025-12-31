@@ -20,12 +20,37 @@ def run_command(cmd, cwd=None):
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, cwd=cwd, check=True)
 
+def cleanup_empty_db_directory():
+    """Remove empty PostgreSQL data directory to allow proper initialization.
+
+    If the directory exists but is empty, PostgreSQL thinks it's already
+    initialized and skips running init scripts. We detect this case and
+    remove the empty directory.
+    """
+    db_data_path = os.path.join("supabase", "docker", "volumes", "db", "data")
+
+    if os.path.exists(db_data_path):
+        # Check if directory is empty (only . and .. entries)
+        try:
+            entries = os.listdir(db_data_path)
+            if not entries:  # Empty directory
+                print(f"Removing empty PostgreSQL data directory: {db_data_path}")
+                print("  (This allows PostgreSQL to properly initialize)")
+                os.rmdir(db_data_path)
+        except Exception as e:
+            print(f"Warning: Could not check/remove {db_data_path}: {e}")
+
 def ensure_supabase_directories():
-    """Create required Supabase bind mount directories to prevent anonymous volumes."""
+    """Create required Supabase bind mount directories to prevent anonymous volumes.
+
+    NOTE: We do NOT create db/data because PostgreSQL needs to detect it as
+    non-existent to properly run initialization scripts. Creating an empty
+    directory causes PostgreSQL to skip initialization.
+    """
     print("Ensuring Supabase bind mount directories exist...")
 
     required_dirs = [
-        os.path.join("supabase", "docker", "volumes", "db", "data"),
+        # DO NOT include db/data - let PostgreSQL create it
         os.path.join("supabase", "docker", "volumes", "storage"),
         os.path.join("supabase", "docker", "volumes", "logs"),
     ]
@@ -245,6 +270,9 @@ def main():
     parser.add_argument('--environment', choices=['private', 'public'], default='private',
                       help='Environment to use for Docker Compose (default: private)')
     args = parser.parse_args()
+
+    # Clean up empty db directory before starting (allows PostgreSQL to properly initialize)
+    cleanup_empty_db_directory()
 
     clone_supabase_repo()
     prepare_supabase_env()

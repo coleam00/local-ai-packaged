@@ -281,6 +281,21 @@ def cleanup_filesystem(preserve_env: bool = False, dry_run: bool = False) -> Non
             except Exception as e:
                 print(f"    Error removing {file_path}: {e}")
 
+    # Also check for empty PostgreSQL data directory
+    # This can cause initialization issues if left in place
+    supabase_db_data = os.path.join("supabase", "docker", "volumes", "db", "data")
+    if os.path.exists(supabase_db_data):
+        try:
+            entries = os.listdir(supabase_db_data)
+            if not entries:
+                if not dry_run:
+                    print_item(f"Removing empty PostgreSQL directory: {supabase_db_data}")
+                    os.rmdir(supabase_db_data)
+                else:
+                    print_item(f"Would remove empty PostgreSQL directory: {supabase_db_data}")
+        except Exception:
+            pass  # Best effort
+
 def confirm_cleanup() -> bool:
     """Ask user for explicit confirmation."""
     print("\n" + "!" * 60)
