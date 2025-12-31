@@ -231,10 +231,8 @@ export const SetupWizard: React.FC = () => {
 
               <div className="mt-4 text-left space-y-3 max-w-md mx-auto">
                 {[
-                  { step: 'clone_supabase', label: 'Cloning Supabase repository', desc: 'Downloading backend services' },
-                  { step: 'prepare_env', label: 'Preparing environment', desc: 'Configuring secrets and settings' },
-                  { step: 'searxng_secret', label: 'Configuring SearXNG', desc: 'Setting up search engine' },
-                  { step: 'start_stack', label: 'Starting services', desc: 'Launching Docker containers (this takes the longest)' },
+                  { step: 'prepare_env', label: 'Preparing Configuration & Secrets', desc: 'Generating secrets and creating configuration files' },
+                  { step: 'start_stack', label: 'Starting Services (Supabase + Local AI)', desc: 'Starting Supabase first, then Local AI services. This may take 2-3 minutes...' },
                 ].map((item, i) => {
                   const stepResult = setupResult?.steps?.find(s => s.step === item.step);
                   const isComplete = stepResult?.status === 'completed';

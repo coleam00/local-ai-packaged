@@ -973,21 +973,20 @@ class SetupService:
             )
 
     async def run_full_setup(self, config: SetupConfigRequest) -> SetupProgressResponse:
-        """Run the complete setup process."""
+        """Run the complete setup process.
+
+        This now delegates most operations to start_services.py to avoid redundancy.
+        The wizard prepares the .env configuration, then start_services.py handles:
+        - Cloning/updating Supabase repository
+        - Copying .env to supabase/docker/.env
+        - Generating SearXNG secret
+        - Starting Supabase services first
+        - Waiting for Supabase to initialize
+        - Starting Local AI services
+        """
         steps: List[SetupStepResult] = []
 
-        # Step 1: Clone Supabase
-        result = await self.clone_supabase_repo()
-        steps.append(result)
-        if result.status == "failed":
-            return SetupProgressResponse(
-                status="failed",
-                current_step="clone_supabase",
-                steps=steps,
-                error=result.error
-            )
-
-        # Step 2: Prepare environment
+        # Step 1: Prepare environment (generate secrets, create .env)
         result = self.prepare_env_file(config)
         steps.append(result)
         if result.status == "failed":
@@ -998,12 +997,7 @@ class SetupService:
                 error=result.error
             )
 
-        # Step 3: SearXNG secret
-        result = self.generate_searxng_secret()
-        steps.append(result)
-        # Non-fatal if fails
-
-        # Step 4: Start stack
+        # Step 2: Start stack (delegates to start_services.py)
         result = await self.start_stack(
             profile=config.profile.value,
             environment=config.environment.value,
