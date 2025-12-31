@@ -62,6 +62,13 @@ def generate_all_secrets() -> Dict[str, str]:
         # Logflare
         "LOGFLARE_PUBLIC_ACCESS_TOKEN": generate_hex_key(32),
         "LOGFLARE_PRIVATE_ACCESS_TOKEN": generate_hex_key(32),
+
+        # Management UI
+        "MANAGEMENT_SECRET_KEY": generate_hex_key(32),
+
+        # Flowise (optional but recommended for security)
+        "FLOWISE_USERNAME": "admin",
+        "FLOWISE_PASSWORD": generate_safe_password(16),
     }
 
 def get_required_defaults() -> Dict[str, str]:
