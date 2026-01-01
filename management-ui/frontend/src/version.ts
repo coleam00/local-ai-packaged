@@ -4,7 +4,7 @@
  * Update this file when releasing new versions to track builds
  */
 
-export const VERSION = '1.3.3';
+export const VERSION = '1.3.4';
 export const BUILD_DATE = '2026-01-01';
 export const VERSION_INFO = `v${VERSION} (${BUILD_DATE})`;
 

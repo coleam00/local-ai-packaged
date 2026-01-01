@@ -107,6 +107,7 @@ async def websocket_metrics(
 ):
     """WebSocket endpoint for streaming metrics for all services."""
     from starlette.websockets import WebSocketDisconnect
+    from ...core.metrics_cache import get_metrics_cache
 
     if not verify_ws_token(token):
         await websocket.close(code=4001, reason="Unauthorized")
@@ -114,14 +115,18 @@ async def websocket_metrics(
 
     await websocket.accept()
 
-    # Send immediate acknowledgment so client knows we're connected
-    try:
-        await websocket.send_json({
-            "type": "connected",
-            "message": "Metrics stream connected"
-        })
-    except Exception:
-        return  # Client already disconnected
+    # Send cached metrics immediately if available
+    cache = get_metrics_cache()
+    if cache.has_data:
+        try:
+            await websocket.send_json({
+                "type": "metrics",
+                "timestamp": cache.timestamp.isoformat() if cache.timestamp else datetime.utcnow().isoformat(),
+                "data": cache.metrics,
+                "cached": True
+            })
+        except Exception:
+            return  # Client already disconnected
 
     try:
         docker_client = DockerClient(
