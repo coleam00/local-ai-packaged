@@ -127,6 +127,33 @@ async def validate_port_configuration(
     return PortValidation(**result)
 
 
+@router.post("/skip")
+async def skip_setup(
+    db: Session = Depends(get_db)
+):
+    """Mark setup as complete without running the wizard.
+
+    Use this when you've already configured the stack manually
+    or want to skip the setup wizard entirely.
+    """
+    # Remove existing config if any
+    db.query(StackConfig).delete()
+
+    # Create minimal config marking setup as completed
+    stack_config = StackConfig(
+        profile="cpu",
+        environment="private",
+        setup_completed=True
+    )
+    # Enable all services by default when skipping
+    stack_config.enabled_services = []  # Empty means show all
+    stack_config.port_overrides = {}
+    db.add(stack_config)
+    db.commit()
+
+    return {"status": "skipped", "message": "Setup marked as complete"}
+
+
 @router.post("/complete", response_model=SetupProgressResponse)
 async def complete_setup(
     config: SetupConfigRequest,

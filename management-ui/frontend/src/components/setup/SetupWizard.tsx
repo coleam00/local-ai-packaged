@@ -11,7 +11,7 @@ import { SecretsStep } from './SecretsStep';
 import { ConfirmStep } from './ConfirmStep';
 import { apiClient } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
-import { Check, ChevronLeft, ChevronRight, Rocket, AlertCircle, Loader2, Clock, Copy, Terminal, ExternalLink } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Rocket, AlertCircle, Loader2, Clock, Copy, Terminal, ExternalLink, SkipForward } from 'lucide-react';
 
 const STEPS = ['preflight', 'profile', 'services', 'ports', 'environment', 'secrets', 'confirm'] as const;
 const STEP_LABELS = ['Check', 'Profile', 'Services', 'Ports', 'Environment', 'Secrets', 'Confirm'];
@@ -48,6 +48,7 @@ export const SetupWizard: React.FC = () => {
   const [portsReady, setPortsReady] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const [config, setConfig] = useState<SetupConfig>({
     profile: 'cpu',
     environment: 'private',
@@ -80,6 +81,21 @@ export const SetupWizard: React.FC = () => {
     navigator.clipboard.writeText(command);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSkipSetup = async () => {
+    setIsSkipping(true);
+    setError(null);
+
+    try {
+      await apiClient.post('/setup/skip');
+      await checkSetupStatus();
+      navigate('/');
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } } };
+      setError(err.response?.data?.detail || 'Failed to skip setup');
+      setIsSkipping(false);
+    }
   };
 
   // Extract CLI command from config_complete message
@@ -399,27 +415,42 @@ export const SetupWizard: React.FC = () => {
       )}
 
       {/* Navigation Actions */}
-      <div className="flex justify-between">
+      <div className="flex justify-between items-center">
         <Button
           variant="ghost"
           onClick={handleBack}
-          disabled={currentStep === 0 || isSubmitting}
+          disabled={currentStep === 0 || isSubmitting || isSkipping}
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
           Back
         </Button>
 
-        {currentStep < STEPS.length - 1 ? (
-          <Button onClick={handleNext} disabled={!canProceed()}>
-            Next
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
-        ) : (
-          <Button onClick={handleComplete} isLoading={isSubmitting} disabled={!canProceed()}>
-            <Rocket className="w-4 h-4 mr-2" />
-            Save Configuration
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSkipSetup}
+            disabled={isSubmitting || isSkipping}
+            className="text-sm text-gray-500 hover:text-gray-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isSkipping ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <SkipForward className="w-3 h-3" />
+            )}
+            Skip Setup
+          </button>
+
+          {currentStep < STEPS.length - 1 ? (
+            <Button onClick={handleNext} disabled={!canProceed() || isSkipping}>
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          ) : (
+            <Button onClick={handleComplete} isLoading={isSubmitting} disabled={!canProceed() || isSkipping}>
+              <Rocket className="w-4 h-4 mr-2" />
+              Save Configuration
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
