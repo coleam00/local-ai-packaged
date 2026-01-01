@@ -106,19 +106,30 @@ async def websocket_metrics(
     interval: float = Query(default=2.0, ge=1.0, le=10.0)
 ):
     """WebSocket endpoint for streaming metrics for all services."""
+    from starlette.websockets import WebSocketDisconnect
+
     if not verify_ws_token(token):
         await websocket.close(code=4001, reason="Unauthorized")
         return
 
     await websocket.accept()
 
-    docker_client = DockerClient(
-        project=settings.COMPOSE_PROJECT_NAME,
-        base_path=settings.COMPOSE_BASE_PATH
-    )
-    collector = MetricsCollector(docker_client.client)
+    # Send immediate acknowledgment so client knows we're connected
+    try:
+        await websocket.send_json({
+            "type": "connected",
+            "message": "Metrics stream connected"
+        })
+    except Exception:
+        return  # Client already disconnected
 
     try:
+        docker_client = DockerClient(
+            project=settings.COMPOSE_PROJECT_NAME,
+            base_path=settings.COMPOSE_BASE_PATH
+        )
+        collector = MetricsCollector(docker_client.client)
+
         while True:
             metrics = collector.get_all_container_stats(docker_client.project)
             await websocket.send_json({
@@ -127,8 +138,17 @@ async def websocket_metrics(
                 "data": metrics
             })
             await asyncio.sleep(interval)
-    except Exception:
-        pass
+    except WebSocketDisconnect:
+        pass  # Normal disconnect, no need to log
+    except Exception as e:
+        print(f"METRICS WS ERROR: {type(e).__name__}: {e}", flush=True)
+        try:
+            await websocket.send_json({
+                "type": "error",
+                "message": str(e)
+            })
+        except Exception:
+            pass
 
 
 @router.websocket("/ws/{service_name}")
@@ -145,22 +165,22 @@ async def websocket_service_metrics(
 
     await websocket.accept()
 
-    docker_client = DockerClient(
-        project=settings.COMPOSE_PROJECT_NAME,
-        base_path=settings.COMPOSE_BASE_PATH
-    )
-    collector = MetricsCollector(docker_client.client)
-
-    container = docker_client.get_container(service_name)
-    if not container:
-        await websocket.send_json({
-            "type": "error",
-            "message": f"Service {service_name} not found"
-        })
-        await websocket.close()
-        return
-
     try:
+        docker_client = DockerClient(
+            project=settings.COMPOSE_PROJECT_NAME,
+            base_path=settings.COMPOSE_BASE_PATH
+        )
+        collector = MetricsCollector(docker_client.client)
+
+        container = docker_client.get_container(service_name)
+        if not container:
+            await websocket.send_json({
+                "type": "error",
+                "message": f"Service {service_name} not found"
+            })
+            await websocket.close()
+            return
+
         prev_stats = None
         prev_time = None
 
@@ -195,5 +215,11 @@ async def websocket_service_metrics(
                 break
 
             await asyncio.sleep(interval)
-    except Exception:
-        pass
+    except Exception as e:
+        try:
+            await websocket.send_json({
+                "type": "error",
+                "message": str(e)
+            })
+        except Exception:
+            pass
