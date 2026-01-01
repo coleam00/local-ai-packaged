@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import Optional
+from typing import Optional, List
+from sqlalchemy.orm import Session
 from ...schemas.service import (
     ServiceListResponse, ServiceDetailResponse, ServiceActionRequest,
     ServiceActionResponse, DependencyGraphResponse, ServiceGroupsResponse,
@@ -14,8 +15,19 @@ from ..deps import (
     get_current_db_user
 )
 from ...core.security import get_current_user
+from ...database import get_db
+from ...models.stack_config import StackConfig
 
 router = APIRouter()
+
+
+def get_enabled_services(db: Session) -> Optional[List[str]]:
+    """Get list of enabled services from stack config, or None if no config."""
+    config = db.query(StackConfig).first()
+    if config and config.enabled_services:
+        return config.enabled_services
+    return None
+
 
 def get_docker_service(
     docker_client: DockerClient = Depends(get_docker_client),
@@ -142,9 +154,10 @@ async def start_service_group(
     request: ServiceActionRequest = None,
     docker_service: DockerService = Depends(get_docker_service),
     graph: DependencyGraph = Depends(get_dependency_graph),
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_user)
 ):
-    """Start all services in a group."""
+    """Start all enabled services in a group."""
     request = request or ServiceActionRequest()
     groups = graph.get_groups()
 
@@ -155,6 +168,12 @@ async def start_service_group(
         )
 
     services = groups[group_id]["services"]
+
+    # Filter by enabled services if configured
+    enabled = get_enabled_services(db)
+    if enabled is not None:
+        services = [s for s in services if s in enabled]
+
     results = []
 
     for service_name in services:
@@ -177,9 +196,10 @@ async def stop_service_group(
     request: ServiceActionRequest = None,
     docker_service: DockerService = Depends(get_docker_service),
     graph: DependencyGraph = Depends(get_dependency_graph),
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_user)
 ):
-    """Stop all services in a group."""
+    """Stop all enabled services in a group."""
     request = request or ServiceActionRequest()
     groups = graph.get_groups()
 
@@ -190,6 +210,12 @@ async def stop_service_group(
         )
 
     services = groups[group_id]["services"]
+
+    # Filter by enabled services if configured
+    enabled = get_enabled_services(db)
+    if enabled is not None:
+        services = [s for s in services if s in enabled]
+
     results = []
 
     # Stop in reverse order (dependents first)

@@ -4,8 +4,8 @@
  * Update this file when releasing new versions to track builds
  */
 
-export const VERSION = '1.1.0';
-export const BUILD_DATE = '2025-12-31';
+export const VERSION = '1.3.2';
+export const BUILD_DATE = '2026-01-01';
 export const VERSION_INFO = `v${VERSION} (${BUILD_DATE})`;
 
 // Display version in console on app load

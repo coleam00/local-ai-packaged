@@ -11,7 +11,7 @@ import { SecretsStep } from './SecretsStep';
 import { ConfirmStep } from './ConfirmStep';
 import { apiClient } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
-import { Check, ChevronLeft, ChevronRight, Rocket, AlertCircle, Loader2, Clock } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Rocket, AlertCircle, Loader2, Clock, Copy, Terminal, ExternalLink } from 'lucide-react';
 
 const STEPS = ['preflight', 'profile', 'services', 'ports', 'environment', 'secrets', 'confirm'] as const;
 const STEP_LABELS = ['Check', 'Profile', 'Services', 'Ports', 'Environment', 'Secrets', 'Confirm'];
@@ -47,6 +47,7 @@ export const SetupWizard: React.FC = () => {
   const [preflightReady, setPreflightReady] = useState(false);
   const [portsReady, setPortsReady] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [copied, setCopied] = useState(false);
   const [config, setConfig] = useState<SetupConfig>({
     profile: 'cpu',
     environment: 'private',
@@ -73,6 +74,17 @@ export const SetupWizard: React.FC = () => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  };
+
+  const copyCommand = (command: string) => {
+    navigator.clipboard.writeText(command);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Extract CLI command from config_complete message
+  const getCliCommand = () => {
+    return `python start_services.py --profile ${config.profile} --environment ${config.environment}`;
   };
 
   const handleNext = () => {
@@ -196,7 +208,55 @@ export const SetupWizard: React.FC = () => {
     return (
       <div className="max-w-2xl mx-auto">
         <Card className="text-center py-8">
-          {setupResult?.status === 'completed' ? (
+          {setupResult?.status === 'config_complete' ? (
+            <>
+              <Check className="w-16 h-16 text-green-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">Configuration Complete!</h3>
+              <p className="text-gray-400 mb-6">
+                Your configuration has been saved. Now start your stack from the terminal.
+              </p>
+
+              {/* CLI Command Box */}
+              <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mb-6 text-left max-w-lg mx-auto">
+                <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
+                  <Terminal className="w-4 h-4" />
+                  <span>Run this command in your terminal:</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-green-400 font-mono text-sm bg-black/50 px-3 py-2 rounded">
+                    {getCliCommand()}
+                  </code>
+                  <button
+                    onClick={() => copyCommand(getCliCommand())}
+                    className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                    title="Copy to clipboard"
+                  >
+                    {copied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
+                  </button>
+                </div>
+                {copied && (
+                  <p className="text-green-400 text-xs mt-2">Copied to clipboard!</p>
+                )}
+              </div>
+
+              {/* Why CLI requirement */}
+              <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 text-left max-w-lg mx-auto mb-6">
+                <p className="text-sm text-blue-300 font-medium mb-1">Why run from terminal?</p>
+                <p className="text-sm text-blue-400/80">
+                  Docker services must be started from your host machine to ensure proper file
+                  mounting and database initialization.
+                </p>
+              </div>
+
+              <Button variant="secondary" onClick={async () => {
+                await checkSetupStatus();
+                navigate('/');
+              }}>
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Go to Dashboard
+              </Button>
+            </>
+          ) : setupResult?.status === 'completed' ? (
             <>
               <Check className="w-16 h-16 text-green-400 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">Setup Complete!</h3>
@@ -217,22 +277,25 @@ export const SetupWizard: React.FC = () => {
           ) : (
             <>
               <Loader2 className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-spin" />
-              <h3 className="text-xl font-semibold text-white mb-2">Setting Up Your Stack...</h3>
+              <h3 className="text-xl font-semibold text-white mb-2">Saving Configuration...</h3>
 
               <div className="flex items-center justify-center gap-2 text-gray-400 mb-4">
                 <Clock className="w-4 h-4" />
                 <span>Elapsed: {formatTime(elapsedTime)}</span>
               </div>
 
-              <p className="text-gray-400 mb-2">This typically takes 2-5 minutes.</p>
+              <p className="text-gray-400 mb-2">This typically takes less than a minute.</p>
               <p className="text-sm text-gray-500 mb-6">
-                We're downloading dependencies, configuring services, and starting containers.
+                Preparing configuration files and generating secrets.
               </p>
 
               <div className="mt-4 text-left space-y-3 max-w-md mx-auto">
                 {[
-                  { step: 'prepare_env', label: 'Preparing Configuration & Secrets', desc: 'Generating secrets and creating configuration files' },
-                  { step: 'start_stack', label: 'Starting Services (Supabase + Local AI)', desc: 'Starting Supabase first, then Local AI services. This may take 2-3 minutes...' },
+                  { step: 'clone_supabase', label: 'Cloning Supabase Repository', desc: 'Getting the latest Supabase Docker configuration' },
+                  { step: 'prepare_env', label: 'Preparing Configuration', desc: 'Generating secrets and creating .env file' },
+                  { step: 'searxng_secret', label: 'Configuring SearXNG', desc: 'Generating SearXNG secret key' },
+                  { step: 'copy_env', label: 'Copying Environment', desc: 'Copying environment to Supabase directory' },
+                  { step: 'write_config', label: 'Saving Service Selection', desc: 'Writing stack configuration for startup script' },
                 ].map((item, i) => {
                   const stepResult = setupResult?.steps?.find(s => s.step === item.step);
                   const isComplete = stepResult?.status === 'completed';
@@ -354,7 +417,7 @@ export const SetupWizard: React.FC = () => {
         ) : (
           <Button onClick={handleComplete} isLoading={isSubmitting} disabled={!canProceed()}>
             <Rocket className="w-4 h-4 mr-2" />
-            Start Stack
+            Save Configuration
           </Button>
         )}
       </div>

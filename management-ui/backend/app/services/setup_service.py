@@ -2,6 +2,7 @@ import subprocess
 import shutil
 import secrets
 import asyncio
+import json
 from pathlib import Path
 from typing import List, Optional
 from ..core.docker_client import DockerClient
@@ -1056,21 +1057,104 @@ class SetupService:
                 error=str(e)
             )
 
-    async def run_full_setup(self, config: SetupConfigRequest) -> SetupProgressResponse:
-        """Run the complete setup process.
+    def _copy_env_to_supabase(self) -> SetupStepResult:
+        """Copy .env to supabase/docker/.env for Supabase services."""
+        try:
+            source = self.base_path / ".env"
+            dest = self.base_path / "supabase" / "docker" / ".env"
 
-        This now delegates most operations to start_services.py to avoid redundancy.
-        The wizard prepares the .env configuration, then start_services.py handles:
-        - Cloning/updating Supabase repository
-        - Copying .env to supabase/docker/.env
-        - Generating SearXNG secret
-        - Starting Supabase services first
-        - Waiting for Supabase to initialize
-        - Starting Local AI services
+            if source.exists():
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(source, dest)
+                return SetupStepResult(
+                    step="copy_env",
+                    status="completed",
+                    message="Environment copied to Supabase"
+                )
+            else:
+                return SetupStepResult(
+                    step="copy_env",
+                    status="failed",
+                    error="Source .env file not found"
+                )
+        except Exception as e:
+            return SetupStepResult(
+                step="copy_env",
+                status="failed",
+                error=str(e)
+            )
+
+    def _write_stack_config(self, config: SetupConfigRequest) -> SetupStepResult:
+        """Write stack configuration to .stack-config.json for start_services.py.
+
+        This file bridges the wizard (running in container) and start_services.py
+        (running on host), allowing the host script to know which services to start.
+        """
+        try:
+            # Get auto-enabled dependencies
+            validation = self.validate_service_selection(
+                config.enabled_services if config.enabled_services else [],
+                config.profile.value
+            )
+
+            # Combine explicitly selected and auto-enabled services
+            all_services = list(config.enabled_services) if config.enabled_services else []
+            for svc_name in validation.get("auto_enabled", {}).keys():
+                if svc_name not in all_services:
+                    all_services.append(svc_name)
+
+            stack_config = {
+                "profile": config.profile.value,
+                "environment": config.environment.value,
+                "enabled_services": all_services,
+                "port_overrides": config.port_overrides if config.port_overrides else {},
+            }
+
+            config_file = self.base_path / ".stack-config.json"
+            with open(config_file, "w") as f:
+                json.dump(stack_config, f, indent=2)
+
+            return SetupStepResult(
+                step="write_config",
+                status="completed",
+                message=f"Stack config saved with {len(all_services)} services"
+            )
+        except Exception as e:
+            return SetupStepResult(
+                step="write_config",
+                status="failed",
+                error=str(e)
+            )
+
+    async def run_full_setup(self, config: SetupConfigRequest) -> SetupProgressResponse:
+        """Run the setup process - configuration only.
+
+        This prepares all configuration files but does NOT start services.
+        Starting services from within a Docker container causes bind mount path
+        resolution issues. The user must run start_services.py from the host terminal.
+
+        Steps:
+        1. Clone/update Supabase repository
+        2. Prepare .env file with secrets and configuration
+        3. Generate SearXNG secret
+        4. Copy .env to supabase/docker/.env
+
+        After completion, returns CLI command for user to run from host.
         """
         steps: List[SetupStepResult] = []
 
-        # Step 1: Prepare environment (generate secrets, create .env)
+        # Step 1: Clone Supabase repository
+        result = await self.clone_supabase_repo()
+        steps.append(result)
+        if result.status == "failed":
+            return SetupProgressResponse(
+                status="failed",
+                current_step="clone_supabase",
+                steps=steps,
+                error=result.error
+            )
+
+        # Step 2: Prepare environment (generate secrets, create .env)
         result = self.prepare_env_file(config)
         steps.append(result)
         if result.status == "failed":
@@ -1081,25 +1165,45 @@ class SetupService:
                 error=result.error
             )
 
-        # Step 2: Start stack (delegates to start_services.py)
-        result = await self.start_stack(
-            profile=config.profile.value,
-            environment=config.environment.value,
-            enabled_services=config.enabled_services if config.enabled_services else None
-        )
+        # Step 3: Generate SearXNG secret
+        result = self.generate_searxng_secret()
         steps.append(result)
-
         if result.status == "failed":
             return SetupProgressResponse(
                 status="failed",
-                current_step="start_stack",
+                current_step="searxng_secret",
                 steps=steps,
                 error=result.error
             )
 
+        # Step 4: Copy .env to supabase/docker/.env
+        result = self._copy_env_to_supabase()
+        steps.append(result)
+        if result.status == "failed":
+            return SetupProgressResponse(
+                status="failed",
+                current_step="copy_env",
+                steps=steps,
+                error=result.error
+            )
+
+        # Step 5: Write stack configuration file for start_services.py
+        result = self._write_stack_config(config)
+        steps.append(result)
+        if result.status == "failed":
+            return SetupProgressResponse(
+                status="failed",
+                current_step="write_config",
+                steps=steps,
+                error=result.error
+            )
+
+        # Build the CLI command for user to run from host terminal
+        cli_command = f"python start_services.py --profile {config.profile.value} --environment {config.environment.value}"
+
         return SetupProgressResponse(
-            status="completed",
+            status="config_complete",
             current_step="done",
             steps=steps,
-            message="Setup completed successfully!"
+            message=f"Configuration complete! To start your stack, run this command from your terminal:\n\n{cli_command}"
         )

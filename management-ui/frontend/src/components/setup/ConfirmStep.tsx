@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '../common/Card';
-import { Settings, Globe, Key, Layers, AlertTriangle } from 'lucide-react';
+import { Settings, Globe, Key, Layers, AlertTriangle, Terminal } from 'lucide-react';
 
 interface ConfirmStepProps {
   config: {
@@ -76,13 +76,24 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({ config }) => {
         </div>
       </Card>
 
-      <div className="mt-6 bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 flex items-start gap-3">
+      {/* CLI Requirement Info */}
+      <div className="mt-6 bg-blue-900/30 border border-blue-700 rounded-lg p-4 flex items-start gap-3">
+        <Terminal className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm text-blue-300 font-medium">Terminal required to start services</p>
+          <p className="text-sm text-blue-400/80 mt-1">
+            After saving configuration, you'll need to run a command in your terminal
+            to start the services. This ensures proper file mounting and database initialization.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm text-yellow-300 font-medium">Before starting</p>
           <p className="text-sm text-yellow-400/80 mt-1">
-            This will start all Docker containers. Make sure Docker is running
-            and you have enough disk space and memory available.
+            Make sure Docker is running and you have enough disk space and memory available.
           </p>
         </div>
       </div>

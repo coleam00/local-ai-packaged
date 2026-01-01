@@ -14,11 +14,40 @@ import time
 import argparse
 import platform
 import sys
+import json
 
 def run_command(cmd, cwd=None):
     """Run a shell command and print it."""
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, cwd=cwd, check=True)
+
+
+def load_stack_config():
+    """Load stack configuration from .stack-config.json if it exists.
+
+    This file is created by the Management UI wizard and contains:
+    - profile: CPU/GPU selection
+    - environment: private/public
+    - enabled_services: list of services to start
+    - port_overrides: custom port mappings
+
+    Returns None if file doesn't exist or is invalid.
+    """
+    config_path = ".stack-config.json"
+    if not os.path.exists(config_path):
+        return None
+
+    try:
+        with open(config_path, "r") as f:
+            config = json.load(f)
+        print(f"Loaded stack configuration from {config_path}")
+        print(f"  Profile: {config.get('profile', 'not set')}")
+        print(f"  Environment: {config.get('environment', 'not set')}")
+        print(f"  Enabled services: {len(config.get('enabled_services', []))} services")
+        return config
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Warning: Could not load {config_path}: {e}")
+        return None
 
 def cleanup_empty_db_directory():
     """Remove empty PostgreSQL data directory to allow proper initialization.
@@ -102,15 +131,21 @@ def start_supabase(environment=None):
     cmd = [
         "docker", "compose", "-p", "localai",
         "-f", "supabase/docker/docker-compose.yml",
-        "-f", "docker-compose.override.vector-fix.yml"  # Fix Windows bind mount bug
     ]
     if environment and environment == "public":
         cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])
     cmd.extend(["up", "-d"])
     run_command(cmd)
 
-def start_local_ai(profile=None, environment=None):
-    """Start the local AI services (using its compose file)."""
+def start_local_ai(profile=None, environment=None, enabled_services=None):
+    """Start the local AI services (using its compose file).
+
+    Args:
+        profile: GPU profile (cpu, gpu-nvidia, gpu-amd, none)
+        environment: Deployment environment (private, public)
+        enabled_services: Optional list of specific services to start.
+                         If None, starts all services for the profile.
+    """
     print("Starting local AI services...")
     cmd = ["docker", "compose", "-p", "localai"]
     if profile and profile != "none":
@@ -121,6 +156,23 @@ def start_local_ai(profile=None, environment=None):
     if environment and environment == "public":
         cmd.extend(["-f", "docker-compose.override.public.yml"])
     cmd.extend(["up", "-d"])
+
+    # If specific services are requested, add them to the command
+    # This tells docker compose to only start these services (plus their dependencies)
+    if enabled_services:
+        # Filter out Supabase services (they're started separately)
+        supabase_services = {
+            "db", "kong", "auth", "rest", "realtime", "storage", "imgproxy",
+            "meta", "functions", "studio", "analytics", "vector", "supavisor"
+        }
+        local_ai_services = [s for s in enabled_services if s not in supabase_services]
+        if local_ai_services:
+            print(f"  Starting {len(local_ai_services)} selected services: {', '.join(local_ai_services)}")
+            cmd.extend(local_ai_services)
+        else:
+            print("  No local AI services selected, skipping...")
+            return
+
     run_command(cmd)
 
 def generate_searxng_secret_key():
@@ -265,11 +317,41 @@ def check_and_fix_docker_compose_for_searxng():
 
 def main():
     parser = argparse.ArgumentParser(description='Start the local AI and Supabase services.')
-    parser.add_argument('--profile', choices=['cpu', 'gpu-nvidia', 'gpu-amd', 'none'], default='cpu',
-                      help='Profile to use for Docker Compose (default: cpu)')
-    parser.add_argument('--environment', choices=['private', 'public'], default='private',
-                      help='Environment to use for Docker Compose (default: private)')
+    parser.add_argument('--profile', choices=['cpu', 'gpu-nvidia', 'gpu-amd', 'none'], default=None,
+                      help='Profile to use for Docker Compose (default: from config or cpu)')
+    parser.add_argument('--environment', choices=['private', 'public'], default=None,
+                      help='Environment to use for Docker Compose (default: from config or private)')
     args = parser.parse_args()
+
+    # Try to load configuration from wizard
+    stack_config = load_stack_config()
+
+    # Use config values if not overridden by CLI arguments
+    profile = args.profile
+    environment = args.environment
+    enabled_services = None
+
+    if stack_config:
+        if profile is None:
+            profile = stack_config.get("profile", "cpu")
+        if environment is None:
+            environment = stack_config.get("environment", "private")
+        enabled_services = stack_config.get("enabled_services")
+        print(f"\nUsing configuration from wizard:")
+        print(f"  Profile: {profile}")
+        print(f"  Environment: {environment}")
+        if enabled_services:
+            print(f"  Services: {len(enabled_services)} selected")
+    else:
+        # Defaults if no config file
+        if profile is None:
+            profile = "cpu"
+        if environment is None:
+            environment = "private"
+        print(f"\nNo wizard configuration found, using defaults/CLI args:")
+        print(f"  Profile: {profile}")
+        print(f"  Environment: {environment}")
+        print(f"  Services: all (no selection)")
 
     # Clean up empty db directory before starting (allows PostgreSQL to properly initialize)
     cleanup_empty_db_directory()
@@ -281,17 +363,17 @@ def main():
     generate_searxng_secret_key()
     check_and_fix_docker_compose_for_searxng()
 
-    stop_existing_containers(args.profile)
+    stop_existing_containers(profile)
 
     # Start Supabase first
-    start_supabase(args.environment)
+    start_supabase(environment)
 
     # Give Supabase some time to initialize
     print("Waiting for Supabase to initialize...")
     time.sleep(10)
 
     # Then start the local AI services
-    start_local_ai(args.profile, args.environment)
+    start_local_ai(profile, environment, enabled_services)
 
 if __name__ == "__main__":
     main()

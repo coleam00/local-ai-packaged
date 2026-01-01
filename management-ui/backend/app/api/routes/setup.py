@@ -47,10 +47,9 @@ async def get_setup_status(
 
 @router.get("/stack-config", response_model=Optional[StackConfigResponse])
 async def get_current_stack_config(
-    db: Session = Depends(get_db),
-    _: dict = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
-    """Get current stack configuration."""
+    """Get current stack configuration (no auth - needed for dashboard filtering)."""
     config = get_stack_config(db)
     if not config:
         return None
@@ -137,8 +136,8 @@ async def complete_setup(
     """Run the complete setup process."""
     result = await setup_service.run_full_setup(config)
 
-    # Save stack config to database on success
-    if result.status == "completed":
+    # Save stack config to database on success (both completed and config_complete)
+    if result.status in ("completed", "config_complete"):
         # Get all services that should be enabled (including auto-enabled dependencies)
         validation = setup_service.validate_service_selection(
             config.enabled_services,
