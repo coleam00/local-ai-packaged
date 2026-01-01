@@ -129,29 +129,46 @@ async def validate_port_configuration(
 
 @router.post("/skip")
 async def skip_setup(
+    setup_service: SetupService = Depends(get_setup_service),
     db: Session = Depends(get_db)
 ):
     """Mark setup as complete without running the wizard.
 
     Use this when you've already configured the stack manually
     or want to skip the setup wizard entirely.
+    Detects currently running services and uses those as enabled.
     """
+    running_services = []
+
+    # Get list of running service names from Docker
+    try:
+        containers = setup_service.docker_client.list_containers()
+        running_services = [
+            c["service"] for c in containers
+            if c.get("status") == "running" and c.get("service")
+        ]
+    except Exception:
+        pass  # If we can't detect, use empty list
+
     # Remove existing config if any
     db.query(StackConfig).delete()
 
-    # Create minimal config marking setup as completed
+    # Create config with detected running services
     stack_config = StackConfig(
         profile="cpu",
         environment="private",
         setup_completed=True
     )
-    # Enable all services by default when skipping
-    stack_config.enabled_services = []  # Empty means show all
+    stack_config.enabled_services = running_services if running_services else []
     stack_config.port_overrides = {}
     db.add(stack_config)
     db.commit()
 
-    return {"status": "skipped", "message": "Setup marked as complete"}
+    return {
+        "status": "skipped",
+        "message": "Setup marked as complete",
+        "detected_services": len(running_services)
+    }
 
 
 @router.post("/complete", response_model=SetupProgressResponse)

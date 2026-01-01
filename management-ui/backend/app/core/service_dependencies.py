@@ -302,11 +302,12 @@ SERVICE_CONFIGS: Dict[str, ServiceConfig] = {
     "caddy": ServiceConfig(
         name="caddy",
         display_name="Caddy",
-        description="Reverse proxy with automatic HTTPS",
+        description="Reverse proxy with automatic HTTPS (only needed for public deployment)",
         group="infrastructure",
         dependencies=[],
-        required=True,
-        category="core"
+        required=False,  # Only needed for public environment, not private
+        default_enabled=False,
+        category="optional"
     ),
     "searxng": ServiceConfig(
         name="searxng",

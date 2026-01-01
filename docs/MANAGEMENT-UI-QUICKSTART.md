@@ -186,4 +186,4 @@ The Management UI writes configuration files to the host filesystem. The `start_
 
 Check your Management UI version in the browser console or at the bottom of the dashboard.
 
-Current version: **1.3.5**
+Current version: **1.3.6**
