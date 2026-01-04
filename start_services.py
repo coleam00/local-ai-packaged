@@ -101,6 +101,7 @@ def generate_searxng_secret_key():
             return
     else:
         print(f"SearXNG settings.yml already exists at {settings_path}")
+        return
 
     print("Generating SearXNG secret key...")
 
