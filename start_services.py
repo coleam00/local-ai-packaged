@@ -39,6 +39,26 @@ def clone_supabase_repo():
         run_command(["git", "pull"])
         os.chdir("..")
 
+def fix_windows_line_endings():
+    """Fix CRLF line endings in Supabase config files on Windows."""
+    if platform.system() != "Windows":
+        return
+    
+    pooler_path = os.path.join("supabase", "docker", "volumes", "pooler", "pooler.exs")
+    if not os.path.exists(pooler_path):
+        return
+    
+    print("Fixing Windows line endings in pooler.exs...")
+    try:
+        with open(pooler_path, 'rb') as f:
+            content = f.read()
+        content = content.replace(b'\r\n', b'\n')
+        with open(pooler_path, 'wb') as f:
+            f.write(content)
+        print("Fixed line endings in pooler.exs")
+    except Exception as e:
+        print(f"Warning: Could not fix line endings in pooler.exs: {e}")
+
 def prepare_supabase_env():
     """Copy .env to .env in supabase/docker."""
     env_path = os.path.join("supabase", "docker", ".env")
@@ -226,6 +246,7 @@ def main():
     args = parser.parse_args()
 
     clone_supabase_repo()
+    fix_windows_line_endings()
     prepare_supabase_env()
 
     # Generate SearXNG secret key and check docker-compose.yml
