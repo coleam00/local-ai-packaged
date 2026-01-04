@@ -5,8 +5,7 @@ quickly bootstraps a fully featured Local AI and Low Code development
 environment including Ollama for your local LLMs, Open WebUI for an interface to chat with your N8N agents, and Supabase for your database, vector store, and authentication. 
 
 This is Cole's version with a couple of improvements and the addition of Supabase, Open WebUI, Flowise, Neo4j, Langfuse, SearXNG, and Caddy!
-Also, the local RAG AI Agent workflows from the video will be automatically in your 
-n8n instance if you use this setup instead of the base one provided by n8n!
+Pre-built RAG AI Agent workflows from the video are included in `n8n/backup/workflows/` - see [Importing Starter Workflows](#importing-starter-workflows) for setup instructions.
 
 **IMPORANT**: Supabase has updated a couple environment variables so you may have to add some new default values in your .env that I have in my .env.example if you have had this project up and running already and are just pulling new changes. Specifically, you need to add "POOLER_DB_POOL_SIZE=5" to your .env. This is required if you have had the package running before June 14th.
 
@@ -243,6 +242,19 @@ to the IP address of your cloud instance.
 - sudo mkdir -p /usr/local/lib/docker/cli-plugins
 - sudo ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
 
+## Importing Starter Workflows
+
+This package includes pre-built n8n workflows in the `n8n/backup/workflows/` folder. To import them:
+
+1. Open n8n at <http://localhost:5678/> (or your custom domain if deployed to the cloud)
+2. Go to your workflow list and click the three-dot menu or use **Import from File**
+3. Select the JSON files from the `n8n/backup/workflows/` folder on your local machine
+
+For detailed instructions, see the [official n8n import/export documentation](https://docs.n8n.io/workflows/export-import/).
+
+> [!NOTE]
+> You'll need to create credentials for each workflow after importing. See step 3 in Quick Start below.
+
 ## ⚡️ Quick start and usage
 
 The main component of the self-hosted AI starter kit is a docker compose file
@@ -253,8 +265,7 @@ to get started.
 1. Open <http://localhost:5678/> in your browser to set up n8n. You’ll only
    have to do this once. You are NOT creating an account with n8n in the setup here,
    it is only a local account for your instance!
-2. Open the included workflow:
-   <http://localhost:5678/workflow/vTN9y2dLXqTiDfPT>
+2. Import a workflow from `n8n/backup/workflows/` (see [Importing Starter Workflows](#importing-starter-workflows)), then open it from your workflow list.
 3. Create credentials for every service:
    
    Ollama URL: http://ollama:11434
