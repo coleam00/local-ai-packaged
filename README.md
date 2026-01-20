@@ -129,9 +129,56 @@ Before running the services, you need to set up your environment variables for S
    LETSENCRYPT_EMAIL=your-email-address
    ```   
 
+4. **Optional - Port Configuration**: All service ports are parameterized in the PORTS section of `.env.example`. If you have port conflicts on your system, you can customize these ports:
+   ```bash
+   ############
+   # [optional] 
+   # PORTS - Centralized port configuration for all services
+   ############
+   
+   # Core AI Services
+   N8N_PORT=5678
+   OPEN_WEBUI_PORT=8080
+   FLOWISE_PORT=3001
+   OLLAMA_PORT=11434
+   
+   # Vector & Graph Databases  
+   QDRANT_PORT_API=6333
+   NEO4J_PORT_HTTP=7474
+   # ... and many more
+   ```
+
+   **Benefits of port parameterization:**
+   - Easily resolve port conflicts with other services
+   - Customize ports for different environments
+   - All ports centrally managed in one location
+   - Maintains backward compatibility with default values
+
 ---
 
 The project includes a `start_services.py` script that handles starting both the Supabase and local AI services. The script accepts a `--profile` flag to specify which GPU configuration to use.
+
+## Using External Supabase (Optional)
+
+By default, the script clones and manages its own Supabase instance. However, if you already have Supabase installed elsewhere, you can use the `--ext-supabase` flag to point to your existing installation:
+
+```bash
+python start_services.py --profile gpu-nvidia --ext-supabase /path/to/your/supabase
+```
+
+**Requirements for external Supabase:**
+- Must have a `docker-compose.yml` file in the specified directory
+- Must have a `.env` file with proper Supabase configuration
+- Supabase services should use the same environment variables as defined in your local AI package `.env` file
+
+**Benefits of external Supabase mode:**
+- Reuse existing Supabase configuration and data
+- Avoid duplicating Supabase installations
+- Cleaner output with reduced Docker Compose warnings
+- Centralized Supabase management across multiple projects
+
+> [!NOTE]
+> When using external Supabase, make sure your Supabase `.env` file uses the same database password and JWT secrets as your local AI package `.env` file for proper integration.
 
 ### For Nvidia GPU users
 
@@ -335,6 +382,7 @@ Here are solutions to common issues you might encounter:
 - **Supabase Service Unavailable** - Make sure you don't have an "@" character in your Postgres password! If the connection to the kong container is working (the container logs say it is receiving requests from n8n) but n8n says it cannot connect, this is generally the problem from what the community has shared. Other characters might not be allowed too, the @ symbol is just the one I know for sure!
 
 - **SearXNG Restarting**: If the SearXNG container keeps restarting, run the command "chmod 755 searxng" within the local-ai-packaged folder so SearXNG has the permissions it needs to create the uwsgi.ini file.
+
 
 - **Files not Found in Supabase Folder** - If you get any errors around files missing in the supabase/ folder like .env, docker/docker-compose.yml, etc. this most likely means you had a "bad" pull of the Supabase GitHub repository when you ran the start_services.py script. Delete the supabase/ folder within the Local AI Package folder entirely and try again.
 
