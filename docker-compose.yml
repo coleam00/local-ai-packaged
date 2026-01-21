@@ -28,6 +28,7 @@ x-n8n: &service-n8n
     - N8N_ENCRYPTION_KEY
     - N8N_USER_MANAGEMENT_JWT_SECRET
     - WEBHOOK_URL=${N8N_HOSTNAME:+https://}${N8N_HOSTNAME:-http://localhost:5678}
+    - OLLAMA_HOST=ollama:11434
 
 x-ollama: &service-ollama
   image: ollama/ollama:latest
@@ -49,9 +50,11 @@ x-init-ollama: &init-ollama
   volumes:
     - ollama_storage:/root/.ollama
   entrypoint: /bin/sh
+  environment:
+    - OLLAMA_HOST=ollama:11434
   command:
     - "-c"
-    - "sleep 3; OLLAMA_HOST=ollama:11434 ollama pull qwen2.5:7b-instruct-q4_K_M; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
+    - "sleep 3; ollama pull qwen2.5:7b-instruct-q4_K_M; ollama pull nomic-embed-text"
 
 services:
   flowise:
