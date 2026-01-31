@@ -283,7 +283,7 @@ to get started.
    until Ollama finishes downloading Llama3.1. You can inspect the docker
    console logs to check on the progress.
 6. Make sure to toggle the workflow as active and copy the "Production" webhook URL!
-7. Open <http://localhost:3000/> in your browser to set up Open WebUI.
+7. Open <http://localhost:8080/> in your browser to set up Open WebUI.
 You’ll only have to do this once. You are NOT creating an account with Open WebUI in the 
 setup here, it is only a local account for your instance!
 8. Go to Workspace -> Functions -> Add Function -> Give name + description then paste in
@@ -296,7 +296,7 @@ you copied in a previous step.
 10. Toggle the function on and now it will be available in your model dropdown in the top left! 
 
 To open n8n at any time, visit <http://localhost:5678/> in your browser.
-To open Open WebUI at any time, visit <http://localhost:3000/>.
+To open Open WebUI at any time, visit <http://localhost:8080/>.
 
 With your n8n instance, you’ll have access to over 400 integrations and a
 suite of basic and advanced AI nodes such as
@@ -348,6 +348,8 @@ Here are solutions to common issues you might encounter:
 - **SearXNG Restarting**: If the SearXNG container keeps restarting, run the command "chmod 755 searxng" within the local-ai-packaged folder so SearXNG has the permissions it needs to create the uwsgi.ini file.
 
 - **Files not Found in Supabase Folder** - If you get any errors around files missing in the supabase/ folder like .env, docker/docker-compose.yml, etc. this most likely means you had a "bad" pull of the Supabase GitHub repository when you ran the start_services.py script. Delete the supabase/ folder within the Local AI Package folder entirely and try again.
+  
+- **Langfuse Web Restarting**: If langfuse-web-1 container keeps restarting itself (at the first installation), start fresh from the beginning. 
 
 ### GPU Support Issues
 
