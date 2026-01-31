@@ -26,8 +26,8 @@ x-n8n: &service-n8n
     - N8N_DIAGNOSTICS_ENABLED=false
     - N8N_PERSONALIZATION_ENABLED=false
     - N8N_ENCRYPTION_KEY
-    - N8N_USER_MANAGEMENT_JWT_SECRET
-    - WEBHOOK_URL=${N8N_HOSTNAME:+https://}${N8N_HOSTNAME:-http://localhost:5678}
+    - N8N_USER_MANAGEMENT_JWT_SECRE
+    - N8N_EDITOR_BASE_URL=${N8N_HOSTNAME}
 
 x-ollama: &service-ollama
   image: ollama/ollama:latest
