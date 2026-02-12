@@ -14,11 +14,122 @@ import time
 import argparse
 import platform
 import sys
+import stat
+import secrets
+import tempfile
 
 def run_command(cmd, cwd=None):
     """Run a shell command and print it."""
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, cwd=cwd, check=True)
+
+
+def command_works(cmd):
+    """Return True if a command can be executed successfully."""
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except Exception:
+        return False
+
+
+def detect_runtime_and_compose():
+    """
+    Detect runtime and compose command.
+    Priority:
+      1) CONTAINER_RUNTIME=docker|podman
+      2) podman compose
+      3) docker compose
+    """
+    requested = os.getenv("CONTAINER_RUNTIME", "").strip().lower()
+    if requested:
+        if requested not in {"docker", "podman"}:
+            raise RuntimeError("CONTAINER_RUNTIME must be either 'docker' or 'podman'")
+        compose_cmd = [requested, "compose"]
+        if not command_works(compose_cmd + ["version"]):
+            raise RuntimeError(f"Requested runtime '{requested}' is not usable ({' '.join(compose_cmd)} version failed)")
+        return requested, compose_cmd
+
+    if shutil.which("podman") and command_works(["podman", "compose", "version"]):
+        return "podman", ["podman", "compose"]
+
+    if shutil.which("docker") and command_works(["docker", "compose", "version"]):
+        return "docker", ["docker", "compose"]
+
+    raise RuntimeError("Could not find a usable container runtime. Install podman or docker with compose support.")
+
+
+def is_unix_socket(path):
+    """Return True when path exists and is a Unix socket."""
+    if not path:
+        return False
+    try:
+        st = os.stat(path)
+    except OSError:
+        return False
+    return stat.S_ISSOCK(st.st_mode)
+
+
+def detect_socket_location(runtime):
+    """
+    Detect the host container socket path used by vector/log collector.
+    For podman rootless, this usually lives at /run/user/<uid>/podman/podman.sock.
+    """
+    env_socket = os.getenv("DOCKER_SOCKET_LOCATION", "").strip()
+
+    if runtime == "docker":
+        candidates = [env_socket, "/var/run/docker.sock", "/run/docker.sock"]
+    else:
+        uid = os.getuid()
+        candidates = [
+            env_socket,
+            f"/run/user/{uid}/podman/podman.sock",
+            "/run/podman/podman.sock",
+            "/var/run/podman/podman.sock",
+            "/var/run/docker.sock",
+            "/run/docker.sock",
+        ]
+
+    for candidate in candidates:
+        if is_unix_socket(candidate):
+            return candidate
+
+    return env_socket if env_socket else None
+
+
+def ensure_podman_socket():
+    """Best-effort: start the podman user socket if systemd user services are available."""
+    if not shutil.which("systemctl"):
+        return
+    try:
+        subprocess.run(
+            ["systemctl", "--user", "start", "podman.socket"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        # Non-fatal: we keep fallback behavior and print warning later.
+        pass
+
+
+def set_env_value(path, key, value):
+    """Set or append KEY=value in a dotenv file."""
+    lines = []
+    found = False
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.startswith(f"{key}="):
+                lines.append(f"{key}={value}\n")
+                found = True
+            else:
+                lines.append(line)
+    if not found:
+        if lines and not lines[-1].endswith("\n"):
+            lines[-1] = lines[-1] + "\n"
+        lines.append(f"{key}={value}\n")
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(lines)
 
 def clone_supabase_repo():
     """Clone the Supabase repository using sparse checkout if not already present."""
@@ -59,43 +170,97 @@ def fix_windows_line_endings():
     except Exception as e:
         print(f"Warning: Could not fix line endings in pooler.exs: {e}")
 
-def prepare_supabase_env():
+def prepare_supabase_env(runtime):
     """Copy .env to .env in supabase/docker."""
     env_path = os.path.join("supabase", "docker", ".env")
     env_example_path = os.path.join(".env")
     print("Copying .env in root to .env in supabase/docker...")
     shutil.copyfile(env_example_path, env_path)
 
-def stop_existing_containers(profile=None):
+    socket_location = detect_socket_location(runtime)
+    if runtime == "podman" and not socket_location:
+        ensure_podman_socket()
+        socket_location = detect_socket_location(runtime)
+    if socket_location:
+        print(f"Using container socket location: {socket_location}")
+        set_env_value(env_path, "DOCKER_SOCKET_LOCATION", socket_location)
+    else:
+        print("Warning: Could not detect a container socket path. Keeping DOCKER_SOCKET_LOCATION as-is.")
+
+def stop_existing_containers(compose_cmd, profile=None, compose_file="docker-compose.yml"):
     print("Stopping and removing existing containers for the unified project 'localai'...")
-    cmd = ["docker", "compose", "-p", "localai"]
+    cmd = compose_cmd + ["-p", "localai"]
     if profile and profile != "none":
         cmd.extend(["--profile", profile])
-    cmd.extend(["-f", "docker-compose.yml", "down"])
+    cmd.extend(["-f", compose_file, "down"])
     run_command(cmd)
 
-def start_supabase(environment=None):
+def start_supabase(compose_cmd, environment=None):
     """Start the Supabase services (using its compose file)."""
     print("Starting Supabase services...")
-    cmd = ["docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml"]
+    cmd = compose_cmd + ["-p", "localai", "-f", "supabase/docker/docker-compose.yml"]
     if environment and environment == "public":
         cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])
     cmd.extend(["up", "-d"])
     run_command(cmd)
 
-def start_local_ai(profile=None, environment=None):
+def start_local_ai(compose_cmd, profile=None, environment=None, compose_file="docker-compose.yml"):
     """Start the local AI services (using its compose file)."""
     print("Starting local AI services...")
-    cmd = ["docker", "compose", "-p", "localai"]
+    cmd = compose_cmd + ["-p", "localai"]
     if profile and profile != "none":
         cmd.extend(["--profile", profile])
-    cmd.extend(["-f", "docker-compose.yml"])
+    cmd.extend(["-f", compose_file])
     if environment and environment == "private":
         cmd.extend(["-f", "docker-compose.override.private.yml"])
     if environment and environment == "public":
         cmd.extend(["-f", "docker-compose.override.public.yml"])
     cmd.extend(["up", "-d"])
     run_command(cmd)
+
+
+def compose_includes_supabase():
+    """Return True when docker-compose.yml already includes Supabase compose file."""
+    compose_path = "docker-compose.yml"
+    if not os.path.exists(compose_path):
+        return False
+    try:
+        with open(compose_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return "./supabase/docker/docker-compose.yml" in content
+    except Exception:
+        return False
+
+
+def build_compose_without_include(source_path):
+    """
+    Create a temporary compose file without top-level `include:`.
+    This avoids relative-path issues in podman-compose when included files are used.
+    """
+    with open(source_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    out = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("include:"):
+            i += 1
+            while i < len(lines):
+                nxt = lines[i]
+                if nxt.startswith(" ") or nxt.startswith("\t") or nxt.strip() == "":
+                    i += 1
+                    continue
+                break
+            continue
+        out.append(line)
+        i += 1
+
+    fd, path = tempfile.mkstemp(prefix="localai-no-include-", suffix=".yml", dir=".")
+    os.close(fd)
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(out)
+    return path
 
 def generate_searxng_secret_key():
     """Generate a secret key for SearXNG based on the current platform."""
@@ -124,52 +289,20 @@ def generate_searxng_secret_key():
 
     print("Generating SearXNG secret key...")
 
-    # Detect the platform and run the appropriate command
-    system = platform.system()
-
     try:
-        if system == "Windows":
-            print("Detected Windows platform, using PowerShell to generate secret key...")
-            # PowerShell command to generate a random key and replace in the settings file
-            ps_command = [
-                "powershell", "-Command",
-                "$randomBytes = New-Object byte[] 32; " +
-                "(New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes); " +
-                "$secretKey = -join ($randomBytes | ForEach-Object { \"{0:x2}\" -f $_ }); " +
-                "(Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml"
-            ]
-            subprocess.run(ps_command, check=True)
-
-        elif system == "Darwin":  # macOS
-            print("Detected macOS platform, using sed command with empty string parameter...")
-            # macOS sed command requires an empty string for the -i parameter
-            openssl_cmd = ["openssl", "rand", "-hex", "32"]
-            random_key = subprocess.check_output(openssl_cmd).decode('utf-8').strip()
-            sed_cmd = ["sed", "-i", "", f"s|ultrasecretkey|{random_key}|g", settings_path]
-            subprocess.run(sed_cmd, check=True)
-
-        else:  # Linux and other Unix-like systems
-            print("Detected Linux/Unix platform, using standard sed command...")
-            # Standard sed command for Linux
-            openssl_cmd = ["openssl", "rand", "-hex", "32"]
-            random_key = subprocess.check_output(openssl_cmd).decode('utf-8').strip()
-            sed_cmd = ["sed", "-i", f"s|ultrasecretkey|{random_key}|g", settings_path]
-            subprocess.run(sed_cmd, check=True)
-
+        random_key = secrets.token_hex(32)
+        with open(settings_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        updated = content.replace("ultrasecretkey", random_key)
+        with open(settings_path, "w", encoding="utf-8") as f:
+            f.write(updated)
         print("SearXNG secret key generated successfully.")
 
     except Exception as e:
         print(f"Error generating SearXNG secret key: {e}")
-        print("You may need to manually generate the secret key using the commands:")
-        print("  - Linux: sed -i \"s|ultrasecretkey|$(openssl rand -hex 32)|g\" searxng/settings.yml")
-        print("  - macOS: sed -i '' \"s|ultrasecretkey|$(openssl rand -hex 32)|g\" searxng/settings.yml")
-        print("  - Windows (PowerShell):")
-        print("    $randomBytes = New-Object byte[] 32")
-        print("    (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes)")
-        print("    $secretKey = -join ($randomBytes | ForEach-Object { \"{0:x2}\" -f $_ })")
-        print("    (Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml")
+        print("You may need to manually set the secret key in searxng/settings.yml.")
 
-def check_and_fix_docker_compose_for_searxng():
+def check_and_fix_docker_compose_for_searxng(container_cli):
     """Check and modify docker-compose.yml for SearXNG first run."""
     docker_compose_path = "docker-compose.yml"
     if not os.path.exists(docker_compose_path):
@@ -184,11 +317,11 @@ def check_and_fix_docker_compose_for_searxng():
         # Default to first run
         is_first_run = True
 
-        # Check if Docker is running and if the SearXNG container exists
+        # Check if runtime is running and if the SearXNG container exists
         try:
             # Check if the SearXNG container is running
             container_check = subprocess.run(
-                ["docker", "ps", "--filter", "name=searxng", "--format", "{{.Names}}"],
+                [container_cli, "ps", "--filter", "name=searxng", "--format", "{{.Names}}"],
                 capture_output=True, text=True, check=True
             )
             searxng_containers = container_check.stdout.strip().split('\n')
@@ -200,7 +333,7 @@ def check_and_fix_docker_compose_for_searxng():
 
                 # Check if uwsgi.ini exists inside the container
                 container_check = subprocess.run(
-                    ["docker", "exec", container_name, "sh", "-c", "[ -f /etc/searxng/uwsgi.ini ] && echo 'found' || echo 'not_found'"],
+                    [container_cli, "exec", container_name, "sh", "-c", "[ -f /etc/searxng/uwsgi.ini ] && echo 'found' || echo 'not_found'"],
                     capture_output=True, text=True, check=False
                 )
 
@@ -244,26 +377,32 @@ def main():
     parser.add_argument('--environment', choices=['private', 'public'], default='private',
                       help='Environment to use for Docker Compose (default: private)')
     args = parser.parse_args()
+    runtime, compose_cmd = detect_runtime_and_compose()
+    print(f"Using container runtime: {runtime}")
+    local_ai_compose_file = "docker-compose.yml"
+    if runtime == "podman" and compose_includes_supabase():
+        local_ai_compose_file = build_compose_without_include("docker-compose.yml")
+        print(f"Using podman-safe compose file: {local_ai_compose_file}")
 
     clone_supabase_repo()
     fix_windows_line_endings()
-    prepare_supabase_env()
+    prepare_supabase_env(runtime)
 
     # Generate SearXNG secret key and check docker-compose.yml
     generate_searxng_secret_key()
-    check_and_fix_docker_compose_for_searxng()
+    check_and_fix_docker_compose_for_searxng(runtime)
 
-    stop_existing_containers(args.profile)
+    stop_existing_containers(compose_cmd, args.profile, local_ai_compose_file)
 
     # Start Supabase first
-    start_supabase(args.environment)
+    start_supabase(compose_cmd, args.environment)
 
     # Give Supabase some time to initialize
     print("Waiting for Supabase to initialize...")
     time.sleep(10)
 
     # Then start the local AI services
-    start_local_ai(args.profile, args.environment)
+    start_local_ai(compose_cmd, args.profile, args.environment, local_ai_compose_file)
 
 if __name__ == "__main__":
     main()
