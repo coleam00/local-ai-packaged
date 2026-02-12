@@ -16,7 +16,7 @@ volumes:
   langfuse_minio_data:
 
 x-n8n: &service-n8n
-  image: n8nio/n8n:latest
+  image: n8nio/n8n:2.7.4
   environment:
     - DB_TYPE=postgresdb
     - DB_POSTGRESDB_HOST=db
@@ -32,7 +32,7 @@ x-n8n: &service-n8n
     # - NODES_EXCLUDE=[]
 
 x-ollama: &service-ollama
-  image: ollama/ollama:latest
+  image: ollama/ollama:0.15.6
   container_name: ollama
   restart: unless-stopped
   expose:
@@ -46,7 +46,7 @@ x-ollama: &service-ollama
     - ollama_storage:/root/.ollama
 
 x-init-ollama: &init-ollama
-  image: ollama/ollama:latest
+  image: ollama/ollama:0.15.6
   container_name: ollama-pull-llama
   volumes:
     - ollama_storage:/root/.ollama
@@ -57,7 +57,7 @@ x-init-ollama: &init-ollama
 
 services:
   flowise:
-    image: flowiseai/flowise
+    image: flowiseai/flowise:3.0.13
     restart: unless-stopped
     container_name: flowise
     expose:
@@ -95,7 +95,7 @@ services:
       - ./shared:/data/shared
 
   qdrant:
-    image: qdrant/qdrant
+    image: qdrant/qdrant:v1.16.3
     container_name: qdrant
     restart: unless-stopped
     expose:
@@ -105,7 +105,7 @@ services:
       - qdrant_storage:/qdrant/storage
 
   neo4j:
-    image: neo4j:latest
+    image: neo4j:2026.01.4
     volumes:
         - ./neo4j/logs:/logs
         - ./neo4j/config:/config
@@ -121,7 +121,7 @@ services:
 
   caddy:
     container_name: caddy
-    image: docker.io/library/caddy:2-alpine
+    image: docker.io/library/caddy:2.10.2-alpine
     restart: unless-stopped
     ports:
       - ${CADDY_HTTP_PORT:-80}:80/tcp
@@ -157,7 +157,7 @@ services:
         max-file: "1"
 
   langfuse-worker:
-    image: langfuse/langfuse-worker:3
+    image: langfuse/langfuse-worker:3.152.0
     restart: always
     depends_on: &langfuse-depends-on
       postgres:
@@ -215,7 +215,7 @@ services:
       REDIS_TLS_KEY: ${REDIS_TLS_KEY:-/certs/redis.key}
 
   langfuse-web:
-    image: langfuse/langfuse:3
+    image: langfuse/langfuse:3.152.0
     restart: always
     depends_on: *langfuse-depends-on
     expose:
@@ -235,7 +235,7 @@ services:
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
 
   clickhouse:
-    image: clickhouse/clickhouse-server
+    image: clickhouse/clickhouse-server:25.12.5.44
     restart: always
     user: "101:101"
     expose:
@@ -257,7 +257,7 @@ services:
       start_period: 1s
 
   minio:
-    image: minio/minio
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     restart: always
     entrypoint: sh
     # create the 'langfuse' bucket before starting the service
@@ -278,7 +278,7 @@ services:
       start_period: 1s
 
   postgres:
-    image: postgres:${POSTGRES_VERSION:-17}
+    image: postgres:${POSTGRES_VERSION:-18}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -296,7 +296,7 @@ services:
 
   redis:
     container_name: redis
-    image: docker.io/valkey/valkey:8-alpine
+    image: docker.io/valkey/valkey:9.0.2-alpine
     command: valkey-server --save 30 1 --loglevel warning
     restart: unless-stopped
     expose:
@@ -322,7 +322,7 @@ services:
 
   searxng:
     container_name: searxng
-    image: docker.io/searxng/searxng:latest
+    image: docker.io/searxng/searxng:2026.2.11-970f2b843
     restart: unless-stopped
     expose:
       - 8080/tcp
@@ -357,7 +357,7 @@ services:
   ollama-gpu-amd:
     profiles: ["gpu-amd"]
     <<: *service-ollama
-    image: ollama/ollama:rocm
+    image: ollama/ollama:0.15.6-rocm
     devices:
       - "/dev/kfd"
       - "/dev/dri"
@@ -377,6 +377,6 @@ services:
   ollama-pull-llama-gpu-amd:
     profiles: [gpu-amd]
     <<: *init-ollama
-    image: ollama/ollama:rocm
+    image: ollama/ollama:0.15.6-rocm
     depends_on:
      - ollama-gpu-amd
