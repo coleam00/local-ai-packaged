@@ -15,6 +15,8 @@ import argparse
 import platform
 import sys
 import stat
+import secrets
+import tempfile
 
 def run_command(cmd, cwd=None):
     """Run a shell command and print it."""
@@ -185,12 +187,12 @@ def prepare_supabase_env(runtime):
     else:
         print("Warning: Could not detect a container socket path. Keeping DOCKER_SOCKET_LOCATION as-is.")
 
-def stop_existing_containers(compose_cmd, profile=None):
+def stop_existing_containers(compose_cmd, profile=None, compose_file="docker-compose.yml"):
     print("Stopping and removing existing containers for the unified project 'localai'...")
     cmd = compose_cmd + ["-p", "localai"]
     if profile and profile != "none":
         cmd.extend(["--profile", profile])
-    cmd.extend(["-f", "docker-compose.yml", "down"])
+    cmd.extend(["-f", compose_file, "down"])
     run_command(cmd)
 
 def start_supabase(compose_cmd, environment=None):
@@ -202,19 +204,63 @@ def start_supabase(compose_cmd, environment=None):
     cmd.extend(["up", "-d"])
     run_command(cmd)
 
-def start_local_ai(compose_cmd, profile=None, environment=None):
+def start_local_ai(compose_cmd, profile=None, environment=None, compose_file="docker-compose.yml"):
     """Start the local AI services (using its compose file)."""
     print("Starting local AI services...")
     cmd = compose_cmd + ["-p", "localai"]
     if profile and profile != "none":
         cmd.extend(["--profile", profile])
-    cmd.extend(["-f", "docker-compose.yml"])
+    cmd.extend(["-f", compose_file])
     if environment and environment == "private":
         cmd.extend(["-f", "docker-compose.override.private.yml"])
     if environment and environment == "public":
         cmd.extend(["-f", "docker-compose.override.public.yml"])
     cmd.extend(["up", "-d"])
     run_command(cmd)
+
+
+def compose_includes_supabase():
+    """Return True when docker-compose.yml already includes Supabase compose file."""
+    compose_path = "docker-compose.yml"
+    if not os.path.exists(compose_path):
+        return False
+    try:
+        with open(compose_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return "./supabase/docker/docker-compose.yml" in content
+    except Exception:
+        return False
+
+
+def build_compose_without_include(source_path):
+    """
+    Create a temporary compose file without top-level `include:`.
+    This avoids relative-path issues in podman-compose when included files are used.
+    """
+    with open(source_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    out = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("include:"):
+            i += 1
+            while i < len(lines):
+                nxt = lines[i]
+                if nxt.startswith(" ") or nxt.startswith("\t") or nxt.strip() == "":
+                    i += 1
+                    continue
+                break
+            continue
+        out.append(line)
+        i += 1
+
+    fd, path = tempfile.mkstemp(prefix="localai-no-include-", suffix=".yml", dir=".")
+    os.close(fd)
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(out)
+    return path
 
 def generate_searxng_secret_key():
     """Generate a secret key for SearXNG based on the current platform."""
@@ -243,50 +289,18 @@ def generate_searxng_secret_key():
 
     print("Generating SearXNG secret key...")
 
-    # Detect the platform and run the appropriate command
-    system = platform.system()
-
     try:
-        if system == "Windows":
-            print("Detected Windows platform, using PowerShell to generate secret key...")
-            # PowerShell command to generate a random key and replace in the settings file
-            ps_command = [
-                "powershell", "-Command",
-                "$randomBytes = New-Object byte[] 32; " +
-                "(New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes); " +
-                "$secretKey = -join ($randomBytes | ForEach-Object { \"{0:x2}\" -f $_ }); " +
-                "(Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml"
-            ]
-            subprocess.run(ps_command, check=True)
-
-        elif system == "Darwin":  # macOS
-            print("Detected macOS platform, using sed command with empty string parameter...")
-            # macOS sed command requires an empty string for the -i parameter
-            openssl_cmd = ["openssl", "rand", "-hex", "32"]
-            random_key = subprocess.check_output(openssl_cmd).decode('utf-8').strip()
-            sed_cmd = ["sed", "-i", "", f"s|ultrasecretkey|{random_key}|g", settings_path]
-            subprocess.run(sed_cmd, check=True)
-
-        else:  # Linux and other Unix-like systems
-            print("Detected Linux/Unix platform, using standard sed command...")
-            # Standard sed command for Linux
-            openssl_cmd = ["openssl", "rand", "-hex", "32"]
-            random_key = subprocess.check_output(openssl_cmd).decode('utf-8').strip()
-            sed_cmd = ["sed", "-i", f"s|ultrasecretkey|{random_key}|g", settings_path]
-            subprocess.run(sed_cmd, check=True)
-
+        random_key = secrets.token_hex(32)
+        with open(settings_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        updated = content.replace("ultrasecretkey", random_key)
+        with open(settings_path, "w", encoding="utf-8") as f:
+            f.write(updated)
         print("SearXNG secret key generated successfully.")
 
     except Exception as e:
         print(f"Error generating SearXNG secret key: {e}")
-        print("You may need to manually generate the secret key using the commands:")
-        print("  - Linux: sed -i \"s|ultrasecretkey|$(openssl rand -hex 32)|g\" searxng/settings.yml")
-        print("  - macOS: sed -i '' \"s|ultrasecretkey|$(openssl rand -hex 32)|g\" searxng/settings.yml")
-        print("  - Windows (PowerShell):")
-        print("    $randomBytes = New-Object byte[] 32")
-        print("    (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes)")
-        print("    $secretKey = -join ($randomBytes | ForEach-Object { \"{0:x2}\" -f $_ })")
-        print("    (Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml")
+        print("You may need to manually set the secret key in searxng/settings.yml.")
 
 def check_and_fix_docker_compose_for_searxng(container_cli):
     """Check and modify docker-compose.yml for SearXNG first run."""
@@ -365,6 +379,10 @@ def main():
     args = parser.parse_args()
     runtime, compose_cmd = detect_runtime_and_compose()
     print(f"Using container runtime: {runtime}")
+    local_ai_compose_file = "docker-compose.yml"
+    if runtime == "podman" and compose_includes_supabase():
+        local_ai_compose_file = build_compose_without_include("docker-compose.yml")
+        print(f"Using podman-safe compose file: {local_ai_compose_file}")
 
     clone_supabase_repo()
     fix_windows_line_endings()
@@ -374,7 +392,7 @@ def main():
     generate_searxng_secret_key()
     check_and_fix_docker_compose_for_searxng(runtime)
 
-    stop_existing_containers(compose_cmd, args.profile)
+    stop_existing_containers(compose_cmd, args.profile, local_ai_compose_file)
 
     # Start Supabase first
     start_supabase(compose_cmd, args.environment)
@@ -384,7 +402,7 @@ def main():
     time.sleep(10)
 
     # Then start the local AI services
-    start_local_ai(compose_cmd, args.profile, args.environment)
+    start_local_ai(compose_cmd, args.profile, args.environment, local_ai_compose_file)
 
 if __name__ == "__main__":
     main()
