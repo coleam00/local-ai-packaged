@@ -1,0 +1,554 @@
+{
+  "name": "InsightsLM - Generate Notebook Details",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "0c488f50-8d6a-48a0-b056-5f7cfca9efe2",
+        "authentication": "headerAuth",
+        "options": {
+          "responseCode": {
+            "values": {
+              "responseCode": "customCode",
+              "customCode": 202
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        380
+      ],
+      "id": "f74c9891-5e7d-47f3-9709-6b59a8949c00",
+      "name": "Webhook",
+      "webhookId": "0c488f50-8d6a-48a0-b056-5f7cfca9efe2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MFP2RlsZaArRcBmq",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.extracted_text.substring(0,1500) }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Based on the data provided, output the following ...\n\n1. An appropriate title, \n2. A 1 paragraph summary\n3. 5 example questions that could be asked of this document. \n\nFor example \"How are the rules and regulations of tennis enforced?\" - Maximum 10 words each\n\n4. One appropriate UTF-8 emoji\n\nOnly return the ONE emoji itself. No words. No punctuation.\n\nExample output:\n🏆\n📓\n😊\n❤️\n\nOnly output in JSON."
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        1540,
+        380
+      ],
+      "id": "06c0b49d-8c3b-472d-bd3d-7aa79bffab6e",
+      "name": "Generate Title & Description"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"title\": \"<ADD>\",\n\t\"summary\": \"<ADD>\",\n  \"example_questions\": [\"ADD\",\"ADD\"],\n  \"emoji\": \"<ADD>\"\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        560
+      ],
+      "id": "69038609-bdec-4944-ad0a-f4e712bacd51",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "d5jtwJY7RRoMcRk4",
+          "mode": "list",
+          "cachedResultName": "InsightsLM - Extract Text"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "filePath": "={{ $json.body.filePath }}"
+          },
+          "matchingColumns": [
+            "filePath"
+          ],
+          "schema": [
+            {
+              "id": "filePath",
+              "displayName": "filePath",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        580
+      ],
+      "id": "06cbb8c2-27e2-4964-8122-9a1edc74071f",
+      "name": "Extract Text"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a25d08b6-2c99-4e08-af5f-62b13e6c4fdb",
+              "leftValue": "={{ $json.body.sourceType }}",
+              "rightValue": "=text",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "3b5d5dce-76c4-445a-bab7-53c2114d52be",
+              "leftValue": "={{ $json.body.sourceType }}",
+              "rightValue": "website",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        380
+      ],
+      "id": "116d7156-59d9-4e72-b1f0-cd0fd096dd64",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ea61516d-9144-4b4b-904e-cf280d5bd08d",
+              "leftValue": "={{ $json.body.sourceType }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        280
+      ],
+      "id": "caf089ae-8437-4f24-8cee-3098a9720da5",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5924d7e-6185-49a5-b61c-d244a40bd9b2",
+              "name": "=extracted_text",
+              "value": "={{ $json.body.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        180
+      ],
+      "id": "225cf365-da69-43d3-836e-b10152a5c8a6",
+      "name": "Set Text"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5924d7e-6185-49a5-b61c-d244a40bd9b2",
+              "name": "=extracted_text",
+              "value": "={{ $json.data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1240,
+        380
+      ],
+      "id": "59032e7f-358e-40d5-b0a6-3baa9df77fb3",
+      "name": "Set Text1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.filePath }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        380
+      ],
+      "id": "51daa67e-d49f-4fee-92e4-09770e3eb13d",
+      "name": "Fetch Webpage"
+    },
+    {
+      "parameters": {
+        "html": "={{ $json.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        380
+      ],
+      "id": "05ea964d-adf0-4e42-83b4-a2ee6140c8b8",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b-q4_K_M",
+        "options": {
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        760
+      ],
+      "id": "14bc8c90-1946-4924-a766-ac013e7a368d",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "QHz0rwHKElfjaqrz",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const options = [\n  'slate', 'gray', 'zinc', 'neutral', 'stone',\n  'red', 'orange', 'amber', 'yellow', 'lime',\n  'green', 'emerald', 'teal', 'cyan', 'sky',\n  'blue', 'indigo', 'violet', 'purple', 'fuchsia',\n  'pink', 'rose'\n];\n\nfor (const item of $input.all()) {\n  const randomOption = options[Math.floor(Math.random() * options.length)];\n  item.json.color = randomOption;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        380
+      ],
+      "id": "27ce50e5-b997-4d8f-89bd-1ca35c13d64f",
+      "name": "Random Color"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "notebooks",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.notebookId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $json.output.title }}"
+            },
+            {
+              "fieldId": "description",
+              "fieldValue": "={{ $json.output.summary }}"
+            },
+            {
+              "fieldId": "color",
+              "fieldValue": "={{ $json.color }}"
+            },
+            {
+              "fieldId": "generation_status",
+              "fieldValue": "completed"
+            },
+            {
+              "fieldId": "example_questions",
+              "fieldValue": "={{ $json.output.example_questions }}"
+            },
+            {
+              "fieldId": "icon",
+              "fieldValue": "={{ $json.output.emoji.slice(0,2) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2180,
+        380
+      ],
+      "id": "7a744622-d26b-4070-8382-8d10a831a6d0",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "[![The AI Automators](https://www.theaiautomators.com/wp-content/uploads/2025/03/gray-logo.png)](https://www.theaiautomators.com/)\n## InsightsLM Local - Generate Notebook Details\nhttps://github.com/theaiautomators/insights-lm-public\nhttps://github.com/theaiautomators/insights-lm-local-package",
+        "height": 340,
+        "width": 320,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -40
+      ],
+      "id": "b02bcaac-9521-44f7-8a1c-c26532a1f3b7",
+      "name": "Sticky Note8"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Title & Description": {
+      "main": [
+        [
+          {
+            "node": "Random Color",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text": {
+      "main": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Set Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Webpage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Text": {
+      "main": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Text1": {
+      "main": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Webpage": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "Set Text1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Random Color": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "944d943e-77c8-4100-aa6e-15d9e290b474",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4f600cb49d3121f65c18400af1d03491e3934ff3323ac0ca2427a7ded76555c6"
+  },
+  "id": "K9HAf5FGpkuXha8F",
+  "tags": [
+    {
+      "createdAt": "2025-07-01T11:04:36.330Z",
+      "updatedAt": "2025-07-01T11:04:36.330Z",
+      "id": "Wki6TfWIHzQoLAWa",
+      "name": "TheAIAutomators.com"
+    }
+  ]
+}

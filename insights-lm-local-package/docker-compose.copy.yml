@@ -1,0 +1,52 @@
+volumes:
+  whisper_cache:
+
+services:
+  insightslm:
+    build:
+      context: ./insights-lm-local-package
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${API_EXTERNAL_URL}
+        VITE_SUPABASE_ANON_KEY: ${ANON_KEY}
+    container_name: insightslm
+    ports:
+      - 3010:80
+    restart: unless-stopped
+
+  coqui-tts:
+    image: ghcr.io/coqui-ai/tts
+    container_name: coqui-tts
+    restart: unless-stopped
+    ports:
+      - 5002
+    entrypoint: ["python3", "TTS/server/server.py"]
+    command: ["--model_name", "tts_models/en/vctk/vits", "--use_cuda", "true"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+
+  whisper-asr:
+    image: onerahmet/openai-whisper-asr-webservice:latest-gpu
+    container_name: whisper-asr
+    restart: unless-stopped
+    ports:
+      - "9002:9000"
+    environment:
+      - ASR_MODEL=${WHISPER_MODEL:-base}  # Options: tiny, base, small, medium, large
+      - ASR_ENGINE=${WHISPER_ENGINE:-openai_whisper}  # Options: openai_whisper, faster_whisper
+      - ASR_MODEL_PATH=/data/whisper
+    volumes:
+      - whisper_cache:/data/whisper  # Persist model cache to avoid redownloading
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles: ["gpu-nvidia"]  # Only run with GPU profile
+
+  

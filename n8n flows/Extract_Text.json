@@ -1,0 +1,376 @@
+{
+  "name": "InsightsLM - Extract Text",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "filePath"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        380
+      ],
+      "id": "83665014-5c04-4de7-b385-abf8ee7979fd",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://kong:8000/storage/v1/object/sign/sources/{{ $json.filePath }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"expiresIn\": 60\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        380
+      ],
+      "id": "0462a879-5157-4de1-a185-423658e16a06",
+      "name": "Generate Signed URL",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://kong:8000/storage/v1/{{ $json.signedURL }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        380
+      ],
+      "id": "7962cc39-4e99-4fab-a67c-584acebba4a4",
+      "name": "Download File"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.headers[\"content-type\"] }}",
+                    "rightValue": "application/pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "dc0dbe8c-70d5-4127-95f8-0fbd3f1a6bad"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2307a9d5-7872-49dc-9aeb-60697b91dc84",
+                    "leftValue": "={{ $json.headers[\"content-type\"] }}",
+                    "rightValue": "audio/mpeg",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "87532eb7-b821-4d84-9d8e-c17136b0a88a",
+                    "leftValue": "={{ $json.headers[\"content-type\"] }}",
+                    "rightValue": "text/plain",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        660,
+        380
+      ],
+      "id": "f0725114-b438-4244-850f-d418ed287edf",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        180
+      ],
+      "id": "f8a0d9cb-3997-4b04-b222-1e3c7996a4d7",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1f5bee5d-939c-4df3-8e7d-0696ac3aa702",
+              "name": "text",
+              "value": "={{ $('Download File').item.json.data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1020,
+        580
+      ],
+      "id": "7b820361-10ab-4a73-b2d5-30cf9d0f232e",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9fea51c0-b3a9-49b5-8608-3264c9d00304",
+              "name": "extracted_text",
+              "value": "={{ $json.text || $json.data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1320,
+        380
+      ],
+      "id": "9afa9d74-b19f-431b-8e88-2a00601d09c3",
+      "name": "Extracted Text"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://whisper-asr:9000/asr?encode=true&task=transcribe&output=txt",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "audio_file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        380
+      ],
+      "id": "2ae20308-88dc-4af8-817b-e76d7f850d84",
+      "name": "Local Whipser"
+    },
+    {
+      "parameters": {
+        "content": "[![The AI Automators](https://www.theaiautomators.com/wp-content/uploads/2025/03/gray-logo.png)](https://www.theaiautomators.com/)\n## InsightsLM Local - Extract Text\nhttps://github.com/theaiautomators/insights-lm-public\nhttps://github.com/theaiautomators/insights-lm-local-package",
+        "height": 260,
+        "width": 300,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d08b45bb-2d2a-46bf-8f49-d499df240456",
+      "name": "Sticky Note9"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "filePath": "3b9b7afd-ba0f-4940-982c-54f00357106d/4894b124-6884-4c4c-a637-2f572c261efb.mp3"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Generate Signed URL": {
+      "main": [
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Local Whipser",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Generate Signed URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Extracted Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Extracted Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Local Whipser": {
+      "main": [
+        [
+          {
+            "node": "Extracted Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "71d7f537-0865-4abf-b994-e5b99c2880b9",
+  "meta": {
+    "instanceId": "4f600cb49d3121f65c18400af1d03491e3934ff3323ac0ca2427a7ded76555c6"
+  },
+  "id": "d5jtwJY7RRoMcRk4",
+  "tags": [
+    {
+      "createdAt": "2025-07-01T11:04:36.330Z",
+      "updatedAt": "2025-07-01T11:04:36.330Z",
+      "id": "Wki6TfWIHzQoLAWa",
+      "name": "TheAIAutomators.com"
+    }
+  ]
+}

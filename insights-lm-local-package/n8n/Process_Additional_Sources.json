@@ -1,0 +1,647 @@
+{
+  "name": "InsightsLM - Process Additional Sources",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "670882ea-5c1e-4b50-9f41-4792256af985",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        500
+      ],
+      "id": "29721d6e-5c25-403f-8034-ddd3d9d55a15",
+      "name": "Webhook",
+      "webhookId": "670882ea-5c1e-4b50-9f41-4792256af985",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MFP2RlsZaArRcBmq",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "jTHf2gRBacjaDiRp",
+          "mode": "list",
+          "cachedResultName": "InsightsLM - Upsert to Vector Store"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "notebook_id": "={{ $('Webhook').item.json.body.notebookId }}",
+            "extracted_text": "={{ $('Webhook').item.json.body.content }}",
+            "source_id": "={{ $('Webhook').item.json.body.sourceId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "notebook_id",
+              "displayName": "notebook_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "extracted_text",
+              "displayName": "extracted_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "source_id",
+              "displayName": "source_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        320
+      ],
+      "id": "ef2e748d-a3e3-4746-8ced-ccfefb2e1e87",
+      "name": "Execute Workflow"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "copied-text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5057cf19-e998-4cbb-b3a2-95bb8b2a7355"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9b0e22e8-984f-46ba-b83e-52d3feda3985",
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "multiple-websites",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        220,
+        500
+      ],
+      "id": "0f6307f9-3934-4c8f-a036-8cc07bedb383",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "body.urls",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        440,
+        600
+      ],
+      "id": "a1bd2a7c-e7cb-4caa-a772-6bf5b6d52262",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        660,
+        600
+      ],
+      "id": "3193ecde-ed8d-493f-994a-aba388fd5784",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "jTHf2gRBacjaDiRp",
+          "mode": "list",
+          "cachedResultName": "InsightsLM - Upsert to Vector Store"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "notebook_id": "={{ $('Switch').item.json.body.notebookId }}",
+            "extracted_text": "={{ $json.content }}",
+            "source_id": "={{ $('Switch').item.json.body.sourceIds[$('Loop Over Items').item.pairedItem.item] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "notebook_id",
+              "displayName": "notebook_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "extracted_text",
+              "displayName": "extracted_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "source_id",
+              "displayName": "source_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2000,
+        680
+      ],
+      "id": "bef6b2cb-c572-46ce-b717-4a370e9f48e8",
+      "name": "Execute Workflow1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2220,
+        740
+      ],
+      "id": "73c82629-353b-473e-8c1e-ae3d8cf02db6",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://kong:8000/storage/v1/object/sources/{{ $('Switch').item.json.body.notebookId }}/{{ $('Switch').item.json.body.sourceIds[$('Loop Over Items').item.pairedItem.item] }}.txt",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        680
+      ],
+      "id": "eea9ee1e-1651-47b2-bcce-084cb4a0dfdd",
+      "name": "Upload File to Bucket",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://kong:8000/storage/v1/object/sources/{{ $('Switch').item.json.body.notebookId }}/{{ $json.body.sourceId }}.txt",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.body.title }}\n{{ $json.body.content }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        320
+      ],
+      "id": "64b4c929-a243-4990-8fa9-154e08b3b513",
+      "name": "Upload File to Bucket1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "sources",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.sourceId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "file_path",
+              "fieldValue": "={{ $('Switch').item.json.body.notebookId }}/{{ $('Webhook').item.json.body.sourceId }}.txt"
+            },
+            {
+              "fieldId": "file_size",
+              "fieldValue": "9999"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        660,
+        320
+      ],
+      "id": "2eff9e35-3d56-4e6a-b84f-39be83ac1323",
+      "name": "Supabase1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json['body.urls'] }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        520
+      ],
+      "id": "e5be6419-987e-4054-90eb-93ef22011b8d",
+      "name": "Fetch Webpage"
+    },
+    {
+      "parameters": {
+        "html": "={{ $('Fetch Webpage').item.json.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        580
+      ],
+      "id": "f53806c5-2861-459e-90ba-d45df489c304",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "sources",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Switch').item.json.body.sourceIds[$('Loop Over Items').item.pairedItem.item] }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('Markdown').item.json.data }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $('HTML').item.json.title }}"
+            },
+            {
+              "fieldId": "file_path",
+              "fieldValue": "={{ $('Switch').item.json.body.notebookId }}/{{ $('Switch').item.json.body.sourceIds[$('Loop Over Items').item.pairedItem.item] }}.txt"
+            },
+            {
+              "fieldId": "file_size",
+              "fieldValue": "9999"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        680
+      ],
+      "id": "2d78068b-0099-49cf-b7e9-c5c7e8f3ee51",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "title",
+              "cssSelector": "title"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        480
+      ],
+      "id": "3f094ece-e8d2-45f7-8bfa-189348085ff8",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "content": "[![The AI Automators](https://www.theaiautomators.com/wp-content/uploads/2025/03/gray-logo.png)](https://www.theaiautomators.com/)\n## InsightsLM Local - Process Additional Sources\nhttps://github.com/theaiautomators/insights-lm-public\nhttps://github.com/theaiautomators/insights-lm-local-package",
+        "height": 320,
+        "width": 300,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        40
+      ],
+      "id": "e007ed7b-efe1-43d9-9555-1d1b4e8577e3",
+      "name": "Sticky Note9"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Upload File to Bucket1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Fetch Webpage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload File to Bucket": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload File to Bucket1": {
+      "main": [
+        [
+          {
+            "node": "Supabase1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase1": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Webpage": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "Upload File to Bucket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3ca546ab-124d-4f1d-8e92-23b6f0a4b22b",
+  "meta": {
+    "instanceId": "4f600cb49d3121f65c18400af1d03491e3934ff3323ac0ca2427a7ded76555c6"
+  },
+  "id": "eA3058NGw8k38BT9",
+  "tags": [
+    {
+      "createdAt": "2025-07-01T11:04:36.330Z",
+      "updatedAt": "2025-07-01T11:04:36.330Z",
+      "id": "Wki6TfWIHzQoLAWa",
+      "name": "TheAIAutomators.com"
+    }
+  ]
+}
