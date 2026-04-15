@@ -388,7 +388,7 @@ services:
      - ollama-gpu-amd
   insightslm:
     build:
-      context: ./insights-lm-local-package
+      context: ./DocAns
       dockerfile: Dockerfile
       args:
         VITE_SUPABASE_URL: ${API_EXTERNAL_URL}

@@ -20,9 +20,6 @@ While the original InsightsLM connects to cloud services, this version has been 
 
 The backend, powered by **N8N**, has been re-engineered to work with local models for inference, embeddings, transcription, and text-to-speech, all without requiring any changes to the frontend application.
 
-<p align="center">
-  <img src="https://www.theaiautomators.com/wp-content/uploads/2025/07/Group-2652.png" alt="The AI Automators Logo" width="500"/>
-</p>
 
 ---
 
@@ -41,11 +38,7 @@ The backend, powered by **N8N**, has been re-engineered to work with local model
 
 For a full demonstration of this local version, an overview of its architecture, and a step-by-step guide on how to set it up, check out our YouTube video:
 
-<p>
-  <a target="_blank" href="https://www.youtube.com/watch?v=aj2FkaaL1co"><img src="https://raw.githubusercontent.com/theaiautomators/insights-lm-local-package/refs/heads/main/local.png" alt="Video" width="500"/></a>
-</p>
 
----
 
 ## Architecture & Built With
 
@@ -79,12 +72,6 @@ I recommend you follow along from **10:48** in our [YouTube video](https://www.y
 
 ### Installation Steps
 
-1.  **Clone the Base Local AI Package Repo**
-    * Open your terminal or VS Code and clone Cole Medin's [local-ai-packaged](https://github.com/coleam00/local-ai-packaged) repository. This forms the foundation of our local setup.
-    ```bash
-    git clone https://github.com/coleam00/local-ai-packaged.git
-    cd local-ai-packaged
-    ```
 
 2.  **Clone the InsightsLM Local Package**
     * Inside the `local-ai-packaged` directory, clone this repository.
