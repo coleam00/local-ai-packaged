@@ -8,6 +8,7 @@ This project merges the core local AI infrastructure from the [local-ai-packaged
 
 ---
 
+
 ## 🚀 Key Features
 
 * **Run Completely Offline:** All services run locally in Docker containers. Your data never leaves your machine.
