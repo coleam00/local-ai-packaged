@@ -1,0 +1,614 @@
+{
+  "name": "InsightsLM - Chat (FIXED)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "2fabf43f-6e6e-424b-8e93-9150e9ce7d6c",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        368
+      ],
+      "id": "acd82ce7-343d-4428-9e31-d601f84309a0",
+      "name": "Webhook",
+      "webhookId": "2fabf43f-6e6e-424b-8e93-9150e9ce7d6c",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "8pi0AxFFUQ3tQAaD",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b-q4_K_M",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        672,
+        784
+      ],
+      "id": "1e733be1-c853-43b0-9bba-35e4c755078a",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "caRoDhmE6Ra3bQXb",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"response\": \"<string>\"\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        608
+      ],
+      "id": "f21de3c3-bc82-4d05-8975-3ddd7d39a2f8",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=User Query: {{ $('Webhook').item.json.body.message }}\n\nConversation History: {{ JSON.stringify($json.data.slice(0,10))  }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "/no_think You MUST output ONLY raw JSON. No thinking. No explanation. No markdown. Format: {\"response\": \"search query\"}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        752,
+        368
+      ],
+      "id": "49bf984e-1edf-464d-b01c-e5eb303cc52f",
+      "name": "Generate Search Query"
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "prompt": "={{ $json.output.response }}",
+        "topK": 10,
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "notebook_id",
+                "value": "={{ $('Webhook').item.json.body.session_id }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        1104,
+        368
+      ],
+      "id": "ac7b0c84-c2f9-4929-ac57-a62d542483bb",
+      "name": "Supabase Vector Store1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "w01h8zAyU2azgQM8",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        592
+      ],
+      "id": "1d64f870-7b57-4136-9fe3-dd26bd4474a3",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": {
+          "id": "caRoDhmE6Ra3bQXb",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        368
+      ],
+      "id": "3c4c736d-c6b4-4056-8477-e87923014620",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"response\": \"<string>\"\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2128,
+        560
+      ],
+      "id": "0a144a53-fa1a-463f-aabd-363c62e5fcda",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# User Query\n{{ $('Webhook').item.json.body.message }}\n\n# Conversation History \n{{ $('Aggregate1').item.json.data }}\n\n# Retrieved Chunks from Knowledgebase\n{{ JSON.stringify($json.data) }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "/no_think Answer the user's question using provided chunks. Cite sources with [chunk_id]. Output ONLY raw JSON: {\"response\": \"your answer with citations [1]\"}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        2000,
+        368
+      ],
+      "id": "62e01574-948e-43d5-a8a3-f3c6f8d1a810",
+      "name": "Generate Response"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b-q4_K_M",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        768
+      ],
+      "id": "4d3ce77a-95a5-4dc5-9751-3975fa28999e",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "caRoDhmE6Ra3bQXb",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and transform the citation format\nfor (const item of $input.all()) {\n  // Assuming chunks are available in item.json.chunks \n  // If chunks come from a different input, modify this line accordingly\n  const chunks = $('Aggregate').first().json.data || [];\n  \n  if (item.json.output && Array.isArray(item.json.output)) {\n    const transformedOutput = [];\n    \n    for (const outputItem of item.json.output) {\n      if (outputItem.sentence_paragraph_with_citation) {\n        const textWithCitations = outputItem.sentence_paragraph_with_citation;\n        \n        // Extract citation indices using regex to find [0], [1], etc.\n        const citationMatches = textWithCitations.match(/\\[(\\d+)\\]/g) || [];\n        const citationIndices = citationMatches.map(match => parseInt(match.replace(/[\\[\\]]/g, '')));\n        \n        // Remove citations from text to get clean text\n        const cleanText = textWithCitations.replace(/\\s*\\[\\d+\\]/g, '').trim();\n        \n        // Build citations array\n        const citations = [];\n        const processedIndices = new Set(); // To avoid duplicates\n        \n        for (const citationId of citationIndices) {\n          if (!processedIndices.has(citationId)) {\n            // Find chunk by chunk_id instead of using array index\n            const chunkItem = chunks.find(chunkItem => chunkItem.chunk_id === citationId);\n            \n            if (chunkItem && chunkItem.document) {\n              const chunk = chunkItem.document;\n              const metadata = chunk.metadata;\n              \n              citations.push({\n                chunk_index: citationId,\n                chunk_source_id: metadata.source_id,\n                chunk_lines_from: metadata.loc.lines.from,\n                chunk_lines_to: metadata.loc.lines.to\n              });\n              processedIndices.add(citationId);\n            }\n          }\n        }\n        \n        transformedOutput.push({\n          text: cleanText,\n          citations: citations\n        });\n      }\n    }\n    \n    // Create the exact output format you specified\n    item.json.output = {\n      type: \"ai\",\n      content: JSON.stringify({\n        output: transformedOutput\n      }),\n      tool_calls: [],\n      additional_kwargs: {},\n      response_metadata: {},\n      invalid_tool_calls: []\n    };\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        368
+      ],
+      "id": "698da358-c385-4e07-8727-6edb4ba47009",
+      "name": "Create Output Structure with Citations"
+    },
+    {
+      "parameters": {
+        "tableId": "n8n_chat_histories",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $('Webhook').item.json.body.session_id }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $json.human }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2832,
+        368
+      ],
+      "id": "ab066bd0-4f01-4357-807a-7b32c62719de",
+      "name": "Save Human Query",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "w01h8zAyU2azgQM8",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "n8n_chat_histories",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $('Webhook').item.json.body.session_id }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $('Create Output Structure with Citations').item.json.output }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3248,
+        368
+      ],
+      "id": "3e6df632-b1b5-4205-94f8-e04046c7dc74",
+      "name": "Save AI Response",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "w01h8zAyU2azgQM8",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3040,
+        368
+      ],
+      "id": "b3405de8-7231-4a42-a19f-12de7b8b6ed7",
+      "name": "Wait",
+      "webhookId": "f763ed07-b94b-4cb5-8000-d181b3da0cea"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "106e9fbb-8fe2-4bc0-8f91-50687c4ac2dd",
+              "name": "human",
+              "value": "={\"type\": \"human\", \"content\": {{ JSON.stringify(($('Webhook').item.json.body.message)) }}, \"additional_kwargs\": {}, \"response_metadata\": {}}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2592,
+        368
+      ],
+      "id": "4f75d044-998f-47c1-a9e4-c82150cd36ce",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add 'id' as the first field\n$input.all().forEach((item, index) => {\n  // Create a new object with id first, then spread the existing properties\n  item.json = {\n    chunk_id: index + 1,\n    ...item.json\n  };\n});\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        368
+      ],
+      "id": "d6cf9e0a-8103-4430-be99-62381c64bc9e",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "n8n_chat_histories",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.body.session_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        224,
+        368
+      ],
+      "id": "0c0cf63e-b2af-45e6-b864-e5d43befbd59",
+      "name": "Fetch Chat History",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "w01h8zAyU2azgQM8",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        464,
+        368
+      ],
+      "id": "44b70cf2-dd35-466c-a51f-b11901b792b8",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "content": "## InsightsLM Local - Chat (FIXED)\n\n### Fixes Applied:\n1. Removed `=` prefix from `/no_think` directive (was `=/no_think`, now `/no_think`)\n2. Improved JSON output instructions with explicit examples\n3. Added clearer formatting requirements to prevent thinking output\n\n### If still getting parse errors:\n- Try using a model that better follows JSON format instructions\n- Or add a Code node to extract JSON from the response",
+        "height": 280,
+        "width": 380,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4ba0e9b9-70c4-4822-9446-4a6897f92573",
+      "name": "Sticky Note8"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch Chat History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Search Query",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Search Query",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Search Query": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store1": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Generate Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Response",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Response",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Response": {
+      "main": [
+        [
+          {
+            "node": "Create Output Structure with Citations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Output Structure with Citations": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Human Query": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Save AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Save Human Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Chat History": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Generate Search Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "55726561-6019-418a-8e1d-5094a541e3ab-FIXED-v2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7361f2e7a6f0da1a96b3c309c77fadb5cc289210d92e6a4c2201ca1058f4519f"
+  },
+  "id": "r1MxZfQu7p6sOgKlYFr-z",
+  "tags": []
+}

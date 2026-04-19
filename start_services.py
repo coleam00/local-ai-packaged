@@ -15,49 +15,48 @@ import argparse
 import platform
 import sys
 
-def run_command(cmd, cwd=None):
+def run_command(cmd, cwd=None, check=True):
     """Run a shell command and print it."""
     print("Running:", " ".join(cmd))
-    subprocess.run(cmd, cwd=cwd, check=True)
+    result = subprocess.run(cmd, cwd=cwd)
+    if check and result.returncode != 0:
+        raise subprocess.CalledProcessError(result.returncode, cmd)
+    return result.returncode
 
 def clone_supabase_repo():
-    """Clone the Supabase repository using sparse checkout if not already present."""
+    """Verify the Supabase docker folder is present (bundled directly in this repo)."""
     if not os.path.exists("supabase"):
-        print("Cloning the Supabase repository...")
-        run_command([
-            "git", "clone", "--filter=blob:none", "--no-checkout",
-            "https://github.com/supabase/supabase.git"
-        ])
-        os.chdir("supabase")
-        run_command(["git", "sparse-checkout", "init", "--cone"])
-        run_command(["git", "sparse-checkout", "set", "docker"])
-        run_command(["git", "checkout", "master"])
-        os.chdir("..")
+        raise RuntimeError(
+            "ERROR: 'supabase' folder not found. "
+            "Please make sure you cloned the full local-ai-packaged repository."
+        )
     else:
-        print("Supabase repository already exists, updating...")
-        os.chdir("supabase")
-        run_command(["git", "pull"])
-        os.chdir("..")
+        print("Supabase folder found (bundled in repo). Skipping git pull.")
 
 def fix_windows_line_endings():
     """Fix CRLF line endings in Supabase config files on Windows."""
     if platform.system() != "Windows":
         return
     
-    pooler_path = os.path.join("supabase", "docker", "volumes", "pooler", "pooler.exs")
-    if not os.path.exists(pooler_path):
-        return
+    files_to_fix = [
+        os.path.join("supabase", "docker", "volumes", "pooler", "pooler.exs"),
+        os.path.join("supabase", "docker", "volumes", "api", "kong-entrypoint.sh")
+    ]
     
-    print("Fixing Windows line endings in pooler.exs...")
-    try:
-        with open(pooler_path, 'rb') as f:
-            content = f.read()
-        content = content.replace(b'\r\n', b'\n')
-        with open(pooler_path, 'wb') as f:
-            f.write(content)
-        print("Fixed line endings in pooler.exs")
-    except Exception as e:
-        print(f"Warning: Could not fix line endings in pooler.exs: {e}")
+    for file_path in files_to_fix:
+        if not os.path.exists(file_path):
+            continue
+        
+        print(f"Fixing Windows line endings in {os.path.basename(file_path)}...")
+        try:
+            with open(file_path, 'rb') as f:
+                content = f.read()
+            content = content.replace(b'\r\n', b'\n')
+            with open(file_path, 'wb') as f:
+                f.write(content)
+            print(f"Fixed line endings in {os.path.basename(file_path)}")
+        except Exception as e:
+            print(f"Warning: Could not fix line endings in {os.path.basename(file_path)}: {e}")
 
 def prepare_supabase_env():
     """Copy .env to .env in supabase/docker."""
@@ -74,14 +73,64 @@ def stop_existing_containers(profile=None):
     cmd.extend(["-f", "docker-compose.yml", "down"])
     run_command(cmd)
 
+def wait_for_db_healthy(timeout=180):
+    """Wait until supabase-db container reports healthy status."""
+    print("Waiting for supabase-db to become healthy...")
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        result = subprocess.run(
+            ["docker", "inspect", "--format={{.State.Health.Status}}", "supabase-db"],
+            capture_output=True, text=True
+        )
+        status = result.stdout.strip()
+        if status == "healthy":
+            print("supabase-db is healthy!")
+            return True
+        if status:
+            print(f"  supabase-db status: {status} ... waiting")
+        time.sleep(5)
+    print("ERROR: supabase-db did not become healthy in time.")
+    return False
+
+def clean_stale_pg_pid():
+    """Remove stale postmaster.pid that prevents Postgres from starting after a crash."""
+    pid_path = os.path.join("supabase", "docker", "volumes", "db", "data", "postmaster.pid")
+    if os.path.exists(pid_path):
+        try:
+            os.remove(pid_path)
+            print("Removed stale postmaster.pid")
+        except Exception as e:
+            print(f"Warning: could not remove postmaster.pid: {e}")
+
 def start_supabase(environment=None):
-    """Start the Supabase services (using its compose file)."""
+    """Start the Supabase services (using its compose file), with retry on DB health failure."""
     print("Starting Supabase services...")
-    cmd = ["docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml"]
+    base_cmd = ["docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml"]
     if environment and environment == "public":
-        cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])
-    cmd.extend(["up", "-d"])
-    run_command(cmd)
+        base_cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])
+
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        print(f"\nAttempt {attempt}/{max_attempts} to start Supabase...")
+        # Remove stale postmaster.pid before each attempt
+        clean_stale_pg_pid()
+
+        up_cmd = base_cmd + ["up", "-d"]
+        rc = run_command(up_cmd, check=False)
+
+        # Even if docker compose exits non-zero, the DB might still be coming up.
+        # Wait up to 3 minutes for it to become healthy before deciding.
+        if wait_for_db_healthy(timeout=180):
+            print("Supabase started successfully.")
+            return
+
+        if attempt < max_attempts:
+            print(f"Supabase DB not healthy after attempt {attempt}. Stopping and retrying...")
+            stop_cmd = ["docker", "compose", "-p", "localai", "-f", "supabase/docker/docker-compose.yml", "down"]
+            run_command(stop_cmd, check=False)
+            time.sleep(5)
+        else:
+            raise RuntimeError("supabase-db failed to become healthy after all retry attempts.")
 
 def start_local_ai(profile=None, environment=None):
     """Start the local AI services (using its compose file)."""

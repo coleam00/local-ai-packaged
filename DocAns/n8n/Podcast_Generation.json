@@ -1,0 +1,461 @@
+{
+  "name": "InsightsLM - Podcast Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "4c4699bc-004b-4ca3-8923-373ddd4a274e",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1940,
+        340
+      ],
+      "id": "8e699fa4-ea2a-4fd7-87be-e0779e3ef149",
+      "name": "Webhook",
+      "webhookId": "4c4699bc-004b-4ca3-8923-373ddd4a274e",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MFP2RlsZaArRcBmq",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "sources",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "notebook_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.notebook_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1720,
+        340
+      ],
+      "id": "c94ea89c-1a4a-4911-94b4-e5512884a0a9",
+      "name": "Get Sources",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "title,content",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1500,
+        340
+      ],
+      "id": "0ac0a7f7-ce65-4670-8035-2287f79e016d",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a podcast host speaking directly to your audience. You are NOT writing a summary, analysis, or structured document.\n\nFORBIDDEN: Do not write any of these:\n- Bullet points or numbered lists\n- Headers like \"### Section A\" or \"**Key Points:**\"\n- Phrases like \"Here's a structured transcript\" or \"Summary of sources\"\n- Document analysis or content breakdowns\n- ANY formatting beyond plain text paragraphs\n\nREQUIRED: Write exactly like this example - natural speech that flows:\n\n\"You know what's fascinating about the insurance industry today? Most people think they understand their travel coverage, but there's so much complexity hidden beneath the surface. Take this multitrip policy I was looking at recently - the coverage levels are all over the map, and that's actually by design.\n\nLet me paint you a picture. You're planning multiple trips throughout the year, maybe a few weekend getaways, perhaps that big European adventure you've been dreaming about. You call up an insurance company, and they start throwing numbers at you. Essential cover gives you twelve hundred euros for cancellation, but here's the kicker - you're looking at a hundred and fifty euro excess. That's money straight out of your pocket before they pay a cent.\n\nBut then they mention Premier Plus, and suddenly we're talking ten thousand euros with no excess at all. That's a completely different ballgame...\"\n\nYour job: Take the source documents and speak about them naturally, like you're having a conversation with a friend over coffee.\n\nSource text:\n\n######\n\n{{ $json.data.map(item => item.content).join('\\n\\n') }}\n\n######\n\nBegin speaking now - no introductions, no formatting, just natural conversation:",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -1060,
+        340
+      ],
+      "id": "3cd0b3e1-f080-4978-8b29-6657833b0e38",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://kong:8000/storage/v1/object/audio/{{ $('Webhook').item.json.body.notebook_id}}/{{ $binary.data.fileName }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "b96f12d0-6d97-4fe0-8a97-df866f41d9f6",
+      "name": "Upload object",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -464,
+        340
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://kong:8000/storage/v1/object/sign/{{ $json.body.Key }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"expiresIn\": 86400\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -244,
+        340
+      ],
+      "id": "0581c5c0-2fd9-4d1f-98e9-aa84f3b78ed4",
+      "name": "Generate Signed URL",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  const now = new Date();\n  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Add 1 day in ms\n  item.json.timestamp = tomorrow.toISOString(); // Compatible with Supabase timestampz\n}\n\nreturn $input.all();\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -24,
+        340
+      ],
+      "id": "ceb82407-1ef9-4a01-894a-0eebe1d60511",
+      "name": "Generate Timestamp for Expires"
+    },
+    {
+      "parameters": {
+        "content": "[![The AI Automators](https://www.theaiautomators.com/wp-content/uploads/2025/03/gray-logo.png)](https://www.theaiautomators.com/)\n## InsightsLM Local - Podcast Generation\nhttps://github.com/theaiautomators/insights-lm-public\nhttps://github.com/theaiautomators/insights-lm-local-package",
+        "height": 280,
+        "width": 300,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1960,
+        0
+      ],
+      "id": "582b715f-8400-447e-a986-7faf3ca27bbd",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b-q4_K_M",
+        "options": {
+          "numCtx": 10000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        -1060,
+        540
+      ],
+      "id": "687d0fca-df37-41ec-8b8e-726a98ff7545",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "QHz0rwHKElfjaqrz",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://coqui-tts:5002/api/tts",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "style_wav"
+            },
+            {
+              "name": "language_id"
+            },
+            {
+              "name": "speaker_id",
+              "value": "p230"
+            },
+            {
+              "name": "text",
+              "value": "={{ JSON.stringify($json.text.split(\"</think>\")[1])}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -684,
+        340
+      ],
+      "id": "fa93d85d-2577-4b87-a821-22af989497b0",
+      "name": "Generate Local Audio"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuration - Set your desired token limit here\nconst MAX_TOKENS = 2500;\n\n// Simple token estimation function (roughly 4 characters = 1 token)\nfunction estimateTokens(text) {\n  if (!text || typeof text !== 'string') return 0;\n  return Math.ceil(text.length / 4);\n}\n\n// Function to get text content from an item\nfunction getTextContent(item) {\n  let content = '';\n  \n  // Add title if it exists\n  if (item.title) {\n    content += item.title + '\\n';\n  }\n  \n  // Add content if it exists and is not null\n  if (item.content && item.content !== null) {\n    content += item.content + '\\n';\n  }\n  \n  return content;\n}\n\n// Function to truncate text to fit within token limit\nfunction truncateToTokenLimit(text, maxTokens) {\n  const estimatedTokens = estimateTokens(text);\n  \n  if (estimatedTokens <= maxTokens) {\n    return text;\n  }\n  \n  // Calculate approximate character limit\n  const maxChars = maxTokens * 4;\n  return text.substring(0, maxChars) + '...';\n}\n\n// Get the first input item and access its data array\nconst dataArray = $input.first().json.data || [];\n\n// Calculate token budget per item\nconst itemCount = dataArray.length;\nconst tokensPerItem = Math.floor(MAX_TOKENS / itemCount);\n\nconsole.log(`Total items: ${itemCount}, Token budget per item: ${tokensPerItem}`);\n\nlet totalTokensUsed = 0;\nconst processedItems = [];\n\n// Process each item in the data array\nfor (const dataItem of dataArray) {\n  // Get the text content from the data item\n  const textContent = getTextContent(dataItem);\n  const originalTokens = estimateTokens(textContent);\n  \n  // Truncate content to fit within the per-item budget\n  const truncatedContent = truncateToTokenLimit(textContent, tokensPerItem);\n  const finalTokens = estimateTokens(truncatedContent);\n  \n  // Create the processed item\n  const newItem = {\n    ...dataItem,\n    content: truncatedContent,\n    tokenCount: finalTokens,\n    originalTokenCount: originalTokens,\n    truncated: originalTokens > tokensPerItem,\n    tokenBudget: tokensPerItem\n  };\n  \n  processedItems.push(newItem);\n  totalTokensUsed += finalTokens;\n  \n  console.log(`Item: ${dataItem.title}, Original: ${originalTokens}, Final: ${finalTokens}, Truncated: ${originalTokens > tokensPerItem}`);\n}\n\n// Return the result in the same structure as input\nreturn [{\n  json: {\n    data: processedItems,\n    tokenSummary: {\n      totalTokensUsed: totalTokensUsed,\n      maxTokensAllowed: MAX_TOKENS,\n      tokensPerItem: tokensPerItem,\n      itemsProcessed: processedItems.length,\n      averageTokensPerItem: Math.round(totalTokensUsed / processedItems.length)\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        340
+      ],
+      "id": "27c58c60-35b6-4577-b1cf-3fa14ef66fd7",
+      "name": "Truncate Sources"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "notebooks",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.notebook_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "audio_overview_url",
+              "fieldValue": "=http://localhost:8000/storage/v1/{{ $json.signedURL }}"
+            },
+            {
+              "fieldId": "audio_url_expires_at",
+              "fieldValue": "={{ $json.timestamp }}"
+            },
+            {
+              "fieldId": "audio_overview_generation_status",
+              "fieldValue": "completed"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        196,
+        340
+      ],
+      "id": "054c3972-3250-40ee-b9dc-aabb79f8f1f5",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Set Max Tokens to be Processed\n",
+        "height": 300,
+        "width": 200
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        200
+      ],
+      "id": "b8b0530d-a1c7-4417-88af-631ef997b3d4",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Speaker ID can be modified\n",
+        "height": 300,
+        "width": 200
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -740,
+        200
+      ],
+      "id": "b7b664b4-becf-4574-a0ad-f8554748bcdd",
+      "name": "Sticky Note1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Sources": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Truncate Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Generate Local Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload object": {
+      "main": [
+        [
+          {
+            "node": "Generate Signed URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Signed URL": {
+      "main": [
+        [
+          {
+            "node": "Generate Timestamp for Expires",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Timestamp for Expires": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Local Audio": {
+      "main": [
+        [
+          {
+            "node": "Upload object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Truncate Sources": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "83926e36-4f9e-443b-879f-61b8b2fae24b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4f600cb49d3121f65c18400af1d03491e3934ff3323ac0ca2427a7ded76555c6"
+  },
+  "id": "W0YFlfO8W9mO09wb",
+  "tags": [
+    {
+      "createdAt": "2025-07-01T11:04:36.330Z",
+      "updatedAt": "2025-07-01T11:04:36.330Z",
+      "id": "Wki6TfWIHzQoLAWa",
+      "name": "TheAIAutomators.com"
+    }
+  ]
+}

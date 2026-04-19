@@ -1,0 +1,562 @@
+{
+  "name": "InsightsLM - Upsert to Vector Store",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "19566c6c-e0a5-4a8f-ba1a-5203c2b663b7",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        320
+      ],
+      "id": "c2a3a825-17c2-41bf-9d49-0a13b3bfd4c9",
+      "name": "Webhook",
+      "webhookId": "19566c6c-e0a5-4a8f-ba1a-5203c2b663b7",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MFP2RlsZaArRcBmq",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.1,
+      "position": [
+        1080,
+        320
+      ],
+      "id": "22d13ff3-571f-402d-a8e7-2d63bf847dac",
+      "name": "Supabase Vector Store",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "notebook_id",
+                "value": "={{ $('Code').item.json.notebook_id }}"
+              },
+              {
+                "name": "source_id",
+                "value": "={{ $('Code').item.json.source_id }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        560
+      ],
+      "id": "69978214-5281-4703-beba-c9ac5a4c97c6",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 200,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        740
+      ],
+      "id": "3b6c2ac7-8d4d-4ea1-9940-73cc688285be",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dab34521-ffef-41db-9eb3-8985fd108466",
+              "name": "text",
+              "value": "={{ $('Code').item.json.extracted_text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        320
+      ],
+      "id": "e86b3bed-bdfe-4012-aa5a-f4be3020b4a8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Example: run this in an n8n Code node (JavaScript)\n\nlet notebook_id;\nlet source_id;\n\ntry {\n  const webhookData = $('Webhook').first();\n  if (webhookData && webhookData.json?.body?.file_path) {\n    const path = webhookData.json.body.file_path;\n    notebook_id = path.split('/')[0];\n    source_id = webhookData.json.body.source_id;\n  }\n} catch (e) {\n  // Webhook not executed or doesn't exist in this context\n  notebook_id = $input.first().json.notebook_id;\n  source_id = $input.first().json.source_id;\n}\n\nconst extracted_text = $input.first().json.extracted_text;\n\nreturn [\n  {\n    json: {\n      notebook_id,\n      extracted_text,\n      source_id\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        320
+      ],
+      "id": "83f3cd6f-021e-4436-a783-1f577bc5e964",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kong:8000/functions/v1/process-document-callback",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_id\": \"{{ $('Code').item.json.source_id }}\",\n  \"status\": \"completed\"\n}\n",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        320
+      ],
+      "id": "26f7c722-d2b7-4dd6-95f3-13583882369d",
+      "name": "HTTP Request",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.extracted_text }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Based on the data provided, output an appropriate title and summary of the document. Only output in JSON in the following format / structure\n\n{\n\t\"title\": \"<ADD>\",\n\t\"summary\": \"<ADD>\"\n}"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        240,
+        320
+      ],
+      "id": "8016c104-379b-437f-b84a-6bd9eca8cec2",
+      "name": "Generate Title & Description"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"title\": \"<ADD>\",\n\t\"summary\": \"<ADD>\"\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        380,
+        520
+      ],
+      "id": "a1de9b05-9c4e-42c3-bb9a-4b8d774472ba",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "sources",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Code').item.json.source_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('Code').item.json.extracted_text }}"
+            },
+            {
+              "fieldId": "summary",
+              "fieldValue": "={{ $json.output.summary }}"
+            },
+            {
+              "fieldId": "display_name",
+              "fieldValue": "={{ $json.output.title }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        620,
+        320
+      ],
+      "id": "69901bf9-75b5-4f3d-aab3-69aaa9ea7c15",
+      "name": "Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FLQTzRBk2pJi894u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "d5jtwJY7RRoMcRk4",
+          "mode": "list",
+          "cachedResultName": "InsightsLM - Extract Text"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "filePath": "={{ $json.body.file_path }}"
+          },
+          "matchingColumns": [
+            "filePath"
+          ],
+          "schema": [
+            {
+              "id": "filePath",
+              "displayName": "filePath",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -200,
+        320
+      ],
+      "id": "25218921-5aec-4b5a-8c04-92ecfbfa51b7",
+      "name": "Extract Text"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "notebook_id"
+            },
+            {
+              "name": "extracted_text"
+            },
+            {
+              "name": "source_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -420,
+        80
+      ],
+      "id": "870e4ccb-c77a-4eef-af5a-2da8c047d811",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        320
+      ],
+      "id": "09263870-34e5-4697-8ace-9fc062f67fb8",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b-q4_K_M",
+        "options": {
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        200,
+        700
+      ],
+      "id": "53bca64c-212a-4f85-a34a-9fbb68cc6c45",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "QHz0rwHKElfjaqrz",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        540
+      ],
+      "id": "0ca25f85-85fb-4a9a-8b1a-293b4bbc76a0",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": {
+          "id": "QHz0rwHKElfjaqrz",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "[![The AI Automators](https://www.theaiautomators.com/wp-content/uploads/2025/03/gray-logo.png)](https://www.theaiautomators.com/)\n## InsightsLM Local - Upsert to Vector Store\nhttps://github.com/theaiautomators/insights-lm-public\nhttps://github.com/theaiautomators/insights-lm-local-package",
+        "height": 260,
+        "width": 300,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        40,
+        -40
+      ],
+      "id": "e04befbc-d931-4849-8778-a93b832c1004",
+      "name": "Sticky Note9"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Title & Description": {
+      "main": [
+        [
+          {
+            "node": "Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9371b231-4055-4097-b572-d3449228f187",
+  "meta": {
+    "instanceId": "4f600cb49d3121f65c18400af1d03491e3934ff3323ac0ca2427a7ded76555c6"
+  },
+  "id": "jTHf2gRBacjaDiRp",
+  "tags": [
+    {
+      "createdAt": "2025-07-01T11:04:36.330Z",
+      "updatedAt": "2025-07-01T11:04:36.330Z",
+      "id": "Wki6TfWIHzQoLAWa",
+      "name": "TheAIAutomators.com"
+    }
+  ]
+}

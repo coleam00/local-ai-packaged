@@ -6,3 +6,11 @@ shared-backup/
 .env.test
 searxng/settings.yml
 searxng/uwsgi*
+
+# Temp / debug output files
+*_logs.txt
+*_out.txt
+*_out_full.txt
+containers.txt
+index_html_temp.html
+index_js_temp.js
