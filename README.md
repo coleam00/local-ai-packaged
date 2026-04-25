@@ -72,7 +72,25 @@ git clone -b stable https://github.com/coleam00/local-ai-packaged.git
 cd local-ai-packaged
 ```
 
-Before running the services, you need to set up your environment variables for Supabase following their [self-hosting guide](https://supabase.com/docs/guides/self-hosting/docker#securing-your-services).
+Before running the services, you need to set up your environment variables. There are two methods:
+
+### Option A: 1Password CLI (recommended)
+
+If you use [1Password CLI](https://developer.1password.com/docs/cli/get-started/) with biometric unlock, secrets can be pulled automatically from the "Local AI Packaged" vault:
+
+```bash
+# Verify all 1Password references resolve
+./generate-env.sh --check
+
+# Generate .env from 1Password (Touch ID)
+./generate-env.sh
+```
+
+This reads `.env.tpl` (committed, contains only `op://` references) and produces a `.env` with real secrets injected. The generated `.env` is gitignored with permissions set to 600.
+
+The template includes Langfuse API keys (`LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`) and `LANGFUSE_BASE_URL` for n8n workflow integration.
+
+### Option B: Manual setup
 
 1. Make a copy of `.env.example` and rename it to `.env` in the root directory of the project
 2. Set the following required environment variables:

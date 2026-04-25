@@ -58,24 +58,30 @@ Two Docker Compose stacks unified under project `localai`:
 
 Service-to-service communication uses internal hostnames (e.g., n8n connects to `ollama:11434`, not `localhost`).
 
-## Configuration & Secrets (1Password)
+## Configuration & Secrets
 
-Secrets are managed via 1Password vault "Local AI Packaged" with a vault-scoped service account (read-only). No plain-text `.env` is committed.
+Two methods for populating `.env`:
+
+### Method A: 1Password CLI (recommended)
+
+Secrets are stored in the 1Password vault "Local AI Packaged". The `.env.tpl` template contains `{{ op://... }}` references that `generate-env.sh` resolves via `op inject` (Touch ID).
 
 ```bash
 # Generate .env from 1Password (Touch ID required)
 ./generate-env.sh
 
-# Verify all references resolve
+# Verify all op:// references resolve without writing .env
 ./generate-env.sh --check
-
-# Renew service account token (every 90 days)
-./generate-env.sh --renew
 ```
 
-- `.env.tpl` — committed template with `op://` references (safe to share)
+- `.env.tpl` — committed template with `{{ op://vault/item/field }}` references (safe to share)
 - `.env` — generated at runtime, gitignored, permissions 600
-- `generate_secrets.py` — standalone secret generator with Supabase JWT support (for fresh installs without 1Password)
+- Vault items: `n8n`, `Supabase`, `Neo4j`, `Langfuse` (infrastructure secrets), `Langfuse (Local)` (user account)
+- Langfuse API keys (`LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`) and `LANGFUSE_BASE_URL` are included
+
+### Method B: Manual (no 1Password)
+
+Copy `.env.example` to `.env` and replace placeholders manually, or use the inline Python secret generator in the setup guide.
 
 Gotcha: avoid `@` in `POSTGRES_PASSWORD` - causes connection string parsing issues.
 

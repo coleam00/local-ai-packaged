@@ -650,10 +650,31 @@ done</pre>
           <div class="step-info">
             <div class="step-title-row">
               <span class="step-number">2.2</span>
-              <span class="step-title">Create .env from template</span>
+              <span class="step-title">Generate .env with secrets</span>
               <span class="badge badge-auto">AUTOMATED</span>
             </div>
-            <div class="step-desc">Copies the example environment file. The next step will fill in the secrets automatically.</div>
+            <div class="step-desc">Choose one of two methods to populate your <code>.env</code> file with secrets.</div>
+
+            <div class="callout callout-info" style="margin-top:10px;">
+              <strong>Option A: 1Password CLI (recommended)</strong><br>
+              If you have the <a href="https://developer.1password.com/docs/cli/get-started/" style="color:var(--accent)">1Password CLI</a> with biometric unlock, secrets are pulled automatically from the "Local AI Packaged" vault. This also includes Langfuse API keys (<code>LANGFUSE_SECRET_KEY</code>, <code>LANGFUSE_PUBLIC_KEY</code>) and <code>LANGFUSE_BASE_URL</code>.
+            </div>
+            <div class="code-block">
+              <pre>cd ~/local-ai-packaged
+
+# Verify all 1Password references resolve
+./generate-env.sh --check
+
+# Generate .env via Touch ID
+./generate-env.sh</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Prints: <code>Generated .env (permissions: 600)</code></div>
+
+            <div class="callout callout-warn" style="margin-top:14px;">
+              <strong>Option B: Manual (no 1Password)</strong><br>
+              Copy the example file and use the inline Python script in the next step to generate random secrets.
+            </div>
             <div class="code-block">
               <pre>cd ~/local-ai-packaged
 cp .env.example .env</pre>
@@ -670,10 +691,10 @@ cp .env.example .env</pre>
           <div class="step-info">
             <div class="step-title-row">
               <span class="step-number">2.3</span>
-              <span class="step-title">Generate all secrets automatically</span>
-              <span class="badge badge-auto">AUTOMATED</span>
+              <span class="step-title">Generate secrets (manual path only)</span>
+              <span class="badge badge-hybrid">SKIP IF 1PASSWORD</span>
             </div>
-            <div class="step-desc">This script generates secure random values for every required secret in <code>.env</code>, including Supabase JWT keys. Uses only Python standard library and openssl &mdash; no extra installs needed.</div>
+            <div class="step-desc">If you used <strong>Option A (1Password)</strong> in step 2.2, skip this step &mdash; your secrets are already populated. Otherwise, run this script to generate secure random values for every required secret in <code>.env</code>, including Supabase JWT keys.</div>
             <div class="code-block">
               <pre>cd ~/local-ai-packaged
 
@@ -1145,7 +1166,7 @@ docker compose -p localai -f ~/local-ai-packaged/supabase/docker/docker-compose.
               <span class="step-title">Set up Langfuse</span>
               <span class="badge badge-user">USER ACTION</span>
             </div>
-            <div class="step-desc">Create an account and project in Langfuse, the LLM observability platform. The API keys can later be used in n8n workflows for tracing.</div>
+            <div class="step-desc">Create an account and project in Langfuse, the LLM observability platform. Generate API keys for n8n workflow tracing.</div>
             <button class="open-btn" onclick="openUrl('http://localhost:3000')">Open Langfuse in Browser</button>
             <div class="browser-instructions">
               <div class="bi-title">In the browser tab:</div>
@@ -1156,9 +1177,10 @@ docker compose -p localai -f ~/local-ai-packaged/supabase/docker/docker-compose.
                 <li>Create a new project (e.g., "Local AI")</li>
                 <li>Go to <strong>"Settings"</strong> &rarr; <strong>"API Keys"</strong></li>
                 <li>Click <strong>"Create new API keys"</strong></li>
-                <li>Save the Public Key and Secret Key somewhere safe &mdash; you'll use these in n8n for tracing AI workflows</li>
+                <li>Save the Public Key and Secret Key &mdash; you'll use these in n8n for tracing AI workflows</li>
               </ol>
             </div>
+            <div class="callout callout-info">If you used 1Password in step 2.2, store the API keys in the "Langfuse" item (fields: <code>Secret Key</code> and <code>Public Key</code>). They are already wired into <code>.env.tpl</code> as <code>LANGFUSE_SECRET_KEY</code> and <code>LANGFUSE_PUBLIC_KEY</code>, so future <code>./generate-env.sh</code> runs will inject them automatically.</div>
           </div>
         </div>
       </div>
@@ -1611,7 +1633,32 @@ open http://localhost:3000
   });
 }
 
+// Sync progress from known completion state
+// Updated: 2026-04-25 — all steps complete, Langfuse API keys stored in 1Password
+function syncKnownProgress() {
+  const SYNC_KEY = 'local-ai-setup-synced-v2';
+  if (localStorage.getItem(SYNC_KEY)) return; // only sync once
+
+  const state = loadState();
+  const completed = [
+    '1.1','1.2','1.3','1.4',           // Prerequisites: all verified
+    '2.1','2.2','2.3','2.4','2.5',     // Clone & Configure: done + 1Password
+    '3.1','3.2','3.3',                 // Ollama: installed, running, models pulled
+    '4.1','4.2','4.3',                 // Stack: all 25 containers running
+    '5.1',                             // n8n: owner created via API
+    '5.2',                             // Open WebUI: working, confirmed
+    '5.3',                             // Qdrant: running, no setup needed
+    '5.4',                             // Neo4j: credentials ready
+    '5.5',                             // Langfuse: account created, API keys in 1Password
+    '5.6',                             // End-to-end: AI chat confirmed working
+  ];
+  completed.forEach(step => { state[step] = true; });
+  saveState(state);
+  localStorage.setItem(SYNC_KEY, Date.now());
+}
+
 // Init on load
+syncKnownProgress();
 init();
 </script>
 
