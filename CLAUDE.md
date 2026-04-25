@@ -46,7 +46,7 @@ Two Docker Compose stacks unified under project `localai`:
 | Service | Port | Internal hostname |
 |---------|------|-------------------|
 | n8n | 5678 | `n8n` |
-| Open WebUI | 3000 | `open-webui` |
+| Open WebUI | 8080 | `open-webui` |
 | Flowise | 3001 | `flowise` |
 | Ollama | 11434 | `ollama` |
 | Qdrant | 6333 | `qdrant` |
@@ -58,14 +58,24 @@ Two Docker Compose stacks unified under project `localai`:
 
 Service-to-service communication uses internal hostnames (e.g., n8n connects to `ollama:11434`, not `localhost`).
 
-## Configuration
+## Configuration & Secrets (1Password)
 
-Single `.env` file at project root (copied from `.env.example`). This same file is copied to `supabase/docker/.env` by `start_services.py`.
+Secrets are managed via 1Password vault "Local AI Packaged" with a vault-scoped service account (read-only). No plain-text `.env` is committed.
 
-Key secrets requiring generation (`openssl rand -hex 32`):
-- `N8N_ENCRYPTION_KEY`, `N8N_USER_MANAGEMENT_JWT_SECRET`
-- `JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY` (Supabase)
-- `CLICKHOUSE_PASSWORD`, `MINIO_ROOT_PASSWORD`, `LANGFUSE_SALT`, `NEXTAUTH_SECRET`, `ENCRYPTION_KEY` (Langfuse)
+```bash
+# Generate .env from 1Password (Touch ID required)
+./generate-env.sh
+
+# Verify all references resolve
+./generate-env.sh --check
+
+# Renew service account token (every 90 days)
+./generate-env.sh --renew
+```
+
+- `.env.tpl` — committed template with `op://` references (safe to share)
+- `.env` — generated at runtime, gitignored, permissions 600
+- `generate_secrets.py` — standalone secret generator with Supabase JWT support (for fresh installs without 1Password)
 
 Gotcha: avoid `@` in `POSTGRES_PASSWORD` - causes connection string parsing issues.
 
