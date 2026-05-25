@@ -8,7 +8,17 @@ This is Cole's version with a couple of improvements and the addition of Supabas
 Also, the local RAG AI Agent workflows from the video will be automatically in your 
 n8n instance if you use this setup instead of the base one provided by n8n!
 
-**IMPORANT**: Supabase has updated a couple environment variables so you may have to add some new default values in your .env that I have in my .env.example if you have had this project up and running already and are just pulling new changes. Specifically, you need to add "POOLER_DB_POOL_SIZE=5" to your .env. This is required if you have had the package running before June 14th.
+> [!IMPORTANT]
+> **Pulling the latest changes after having the package running already?** Supabase keeps moving environment variables out of its Docker Compose file and into `.env`, so you may need to add new defaults that are already in my `.env.example`. Most recently, the Storage service started requiring its own config in `.env` — if it's missing, the `supabase-storage` container crashes on startup with a `region is missing` error. Add the following to your `.env`:
+>
+> ```
+> REGION=stub
+> GLOBAL_S3_BUCKET=stub
+> STORAGE_TENANT_ID=stub
+> S3_PROTOCOL_ACCESS_KEY_ID=625729a08b95bf1b7ff351a663f3a23c
+> S3_PROTOCOL_ACCESS_KEY_SECRET=850181e4652dd023b7a98c58ae0d2d34bd487ee0cc3254aed6e
+> POOLER_DB_POOL_SIZE=5
+> ```
 
 ## Important Links
 
