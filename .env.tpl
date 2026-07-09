@@ -50,7 +50,6 @@ LANGFUSE_BASE_URL={{ op://Local AI Packaged/Langfuse/LANGFUSE_BASE_URL }}
 # Caddy Config
 ############
 
-# N8N_HOSTNAME=n8n.yourdomain.com
 # WEBUI_HOSTNAME=openwebui.yourdomain.com
 # FLOWISE_HOSTNAME=flowise.yourdomain.com
 # SUPABASE_HOSTNAME=supabase.yourdomain.com
@@ -121,11 +120,11 @@ PGRST_DB_SCHEMAS=public,storage,graphql_public
 ############
 
 ## General
-SITE_URL=http://localhost:3000
+SITE_URL=https://supabase.tail0d6f8e.ts.net
 ADDITIONAL_REDIRECT_URLS=
 JWT_EXPIRY=3600
 DISABLE_SIGNUP=false
-API_EXTERNAL_URL=http://localhost:8000
+API_EXTERNAL_URL=https://supabase.tail0d6f8e.ts.net
 
 ## Mailer Config
 MAILER_URLPATHS_CONFIRMATION="/auth/v1/verify"
@@ -156,7 +155,7 @@ STUDIO_DEFAULT_ORGANIZATION=Default Organization
 STUDIO_DEFAULT_PROJECT=Default Project
 
 STUDIO_PORT=3000
-SUPABASE_PUBLIC_URL=http://localhost:8000
+SUPABASE_PUBLIC_URL=https://supabase.tail0d6f8e.ts.net
 
 IMGPROXY_ENABLE_WEBP_DETECTION=true
 
@@ -178,3 +177,15 @@ DOCKER_SOCKET_LOCATION=/var/run/docker.sock
 
 GOOGLE_PROJECT_ID=GOOGLE_PROJECT_ID
 GOOGLE_PROJECT_NUMBER=GOOGLE_PROJECT_NUMBER
+
+############
+# Storage (Supabase storage-api v1.48+ requires REGION; file backend uses GLOBAL_S3_BUCKET as dir name)
+############
+REGION=local
+GLOBAL_S3_BUCKET=stub
+STORAGE_TENANT_ID=stub
+S3_PROTOCOL_ACCESS_KEY_ID=stub
+S3_PROTOCOL_ACCESS_KEY_SECRET=stub
+IMGPROXY_AUTO_WEBP=true
+PG_META_CRYPTO_KEY={{ op://Local AI Packaged/Supabase/pg_meta_crypto_key }}
+N8N_HOSTNAME=n8n.tail0d6f8e.ts.net
