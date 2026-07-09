@@ -73,7 +73,57 @@ services:
       - "docktail.service.port=3001"            # flowise listens on 3001 inside the container (PORT=3001)
       - "docktail.service.service-port=443"     # HTTPS terminated with the ts.net cert
 
-  # --- P1-3..P1-6 go here later (langfuse-web / n8n / kong / neo4j) ---
+  # --- P1-3: Langfuse as a private Tailscale Service ---
+  langfuse-web:
+    labels:
+      - "docktail.service.enable=true"
+      - "docktail.service.name=langfuse"        # -> https://langfuse.tail0d6f8e.ts.net
+      - "docktail.service.port=3000"            # langfuse-web listens on 3000 inside the container
+      - "docktail.service.service-port=443"     # HTTPS terminated with the ts.net cert
+    environment:
+      # base compose hardcodes http://localhost:3002 — point NextAuth at the tailnet origin
+      - NEXTAUTH_URL=https://langfuse.tail0d6f8e.ts.net
+
+  # --- P1-6: Neo4j browser as a private Tailscale Service ---
+  # NOTE: the Neo4j Browser (served on 7474) connects to bolt (7687) SEPARATELY. Over the
+  # tailnet only 7474 is a Service, so login to the graph may fail until bolt is also
+  # reachable (future: a TCP/TLS Service for 7687, or NEO4J advertised address). The UI
+  # itself loads/serves over HTTPS — that's what the seam checks here.
+  neo4j:
+    labels:
+      - "docktail.service.enable=true"
+      - "docktail.service.name=neo4j"           # -> https://neo4j.tail0d6f8e.ts.net
+      - "docktail.service.port=7474"            # Neo4j Browser HTTP UI
+      - "docktail.service.service-port=443"
+
+  # --- P1-5: Supabase API/Studio (Kong gateway) as a private Tailscale Service ---
+  # Kong is pulled in via the base compose's `include:` of supabase/docker/docker-compose.yml.
+  # Strip its published host ports and expose it only through the tailnet.
+  kong:
+    ports: !reset null
+    labels:
+      - "docktail.service.enable=true"
+      - "docktail.service.name=supabase"        # -> https://supabase.tail0d6f8e.ts.net
+      - "docktail.service.port=8000"            # Kong HTTP gateway (Studio + REST/auth)
+      - "docktail.service.service-port=443"
+
+  # Supavisor (Postgres pooler) publishes host ports too — strip them (internal only, no Service).
+  supavisor:
+    ports: !reset null
+
+  # --- P1-4: n8n (in-stack) as a private Tailscale Service ---
+  # Needs Supabase's `db` (DB_POSTGRESDB_HOST=db) + n8n-import to complete first.
+  # WEBHOOK_URL auto-derives from N8N_HOSTNAME in .env; set the editor/host origin here too.
+  n8n:
+    labels:
+      - "docktail.service.enable=true"
+      - "docktail.service.name=n8n"             # -> https://n8n.tail0d6f8e.ts.net
+      - "docktail.service.port=5678"
+      - "docktail.service.service-port=443"
+    environment:
+      - N8N_HOST=n8n.tail0d6f8e.ts.net
+      - N8N_PROTOCOL=https
+      - N8N_EDITOR_BASE_URL=https://n8n.tail0d6f8e.ts.net
 
 volumes:
   ts-state:
