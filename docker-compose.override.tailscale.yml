@@ -91,10 +91,23 @@ services:
   # itself loads/serves over HTTPS — that's what the seam checks here.
   neo4j:
     labels:
+      # primary: the Neo4j Browser HTTP UI
       - "docktail.service.enable=true"
       - "docktail.service.name=neo4j"           # -> https://neo4j.tail0d6f8e.ts.net
       - "docktail.service.port=7474"            # Neo4j Browser HTTP UI
       - "docktail.service.service-port=443"
+      # indexed service #1: bolt (7687) as a plain TCP Tailscale Service (WireGuard-
+      # encrypted). Reachable at neo4j-bolt.tail0d6f8e.ts.net:7687 for bolt DRIVERS /
+      # cypher-shell / Neo4j Desktop  ->  bolt://neo4j-bolt.tail0d6f8e.ts.net:7687
+      # CAVEAT: the HTTPS-served Neo4j Browser (neo4j.tail0d6f8e.ts.net) can NOT use a
+      # plain-bolt URL from the page (mixed-content). That needs tls-terminated-tcp
+      # (neo4j+s://), which did not apply on tailscaled v1.98.4 ("No serve config" /
+      # invalid cert domain) — revisit when the sidecar image is bumped.
+      - "docktail.service.1.name=neo4j-bolt"    # -> neo4j-bolt.tail0d6f8e.ts.net:7687
+      - "docktail.service.1.port=7687"
+      - "docktail.service.1.protocol=tcp"                     # backend: plain bolt TCP
+      - "docktail.service.1.service-protocol=tcp"             # tailnet edge: plain TCP (WireGuard-encrypted)
+      - "docktail.service.1.service-port=7687"
 
   # --- P1-5: Supabase API/Studio (Kong gateway) as a private Tailscale Service ---
   # Kong is pulled in via the base compose's `include:` of supabase/docker/docker-compose.yml.
