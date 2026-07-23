@@ -281,8 +281,16 @@ to get started.
 1. Open <http://localhost:5678/> in your browser to set up n8n. You’ll only
    have to do this once. You are NOT creating an account with n8n in the setup here,
    it is only a local account for your instance!
-2. Open the included workflow:
-   <http://localhost:5678/workflow/vTN9y2dLXqTiDfPT>
+2. Open the **Workflows** view in n8n and select the workflow imported from
+   `n8n/backup/workflows/V1_Local_RAG_AI_Agent.json`. This is the baseline local
+   RAG agent (Ollama + Postgres chat memory + Qdrant). The startup
+   `n8n-import` container also imports these optional variants:
+
+   - `V2_Local_Supabase_RAG_AI_Agent.json` - Supabase-backed RAG
+   - `V3_Local_Agentic_RAG_AI_Agent.json` - multi-step agentic RAG
+
+   The URL path contains an instance-specific workflow ID, so use the workflow
+   name or source filename instead of a hard-coded `/workflow/...` URL.
 3. Create credentials for every service:
    
    Ollama URL: http://ollama:11434

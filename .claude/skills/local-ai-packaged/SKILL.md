@@ -153,7 +153,10 @@ PG_META_CRYPTO_KEY=<32-hex-chars>   # supabase-meta won't start without it
 ### 1. Build a local RAG agent
 
 1. Open n8n at http://localhost:5678 and complete the local-only signup
-2. Open the imported V1/V2/V3 RAG workflow (URL in README: `/workflow/vTN9y2dLXqTiDfPT`)
+2. Open n8n's **Workflows** view and select the imported
+   `V1_Local_RAG_AI_Agent.json` workflow as the baseline. V2 and V3 are also
+   imported from `n8n/backup/workflows/`; workflow URL IDs are instance-specific,
+   so do not rely on a hard-coded `/workflow/...` URL.
 3. Create credentials inside n8n:
    - **Ollama** — base URL `http://ollama:11434` (or `http://host.docker.internal:11434/` if `--profile none`)
    - **Postgres (Supabase)** — Host `db`, port `5432`, user/password/db from `.env`
