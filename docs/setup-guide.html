@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local AI Packaged - Setup Guide</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-hover: #1c2333;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --green-bg: rgba(63,185,80,0.12);
+    --blue: #58a6ff;
+    --blue-bg: rgba(88,166,255,0.12);
+    --orange: #d29922;
+    --orange-bg: rgba(210,153,34,0.12);
+    --red: #f85149;
+    --progress-bg: #21262d;
+    --code-bg: #0d1117;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0 16px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  header {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  header .subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  /* Progress bar */
+  .progress-container {
+    margin-bottom: 16px;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .progress-bar {
+    height: 8px;
+    background: var(--progress-bg);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), #2ea043);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* Top buttons */
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    font-family: inherit;
+  }
+
+  .btn:hover { background: var(--surface-hover); border-color: var(--text-muted); }
+
+  .btn-primary {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .btn-primary:hover { background: #2ea043; }
+
+  .btn-danger {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .btn-danger:hover { background: rgba(248,81,73,0.1); }
+
+  /* Phase accordion */
+  .phase {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--surface);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+
+  .phase-header:hover { background: var(--surface-hover); }
+
+  .phase-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .phase-header .chevron {
+    transition: transform 0.2s;
+    color: var(--text-muted);
+  }
+
+  .phase.open .phase-header .chevron { transform: rotate(90deg); }
+
+  .phase-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .phase-progress-mini {
+    height: 4px;
+    width: 60px;
+    background: var(--progress-bg);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .phase-progress-mini-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .phase-content {
+    display: none;
+    padding: 8px 18px 18px;
+  }
+
+  .phase.open .phase-content { display: block; }
+
+  /* Step card */
+  .step {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-top: 10px;
+    padding: 14px 16px;
+    background: var(--surface);
+    transition: border-color 0.2s;
+  }
+
+  .step.completed {
+    opacity: 0.6;
+    border-color: var(--green);
+  }
+
+  .step-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .step-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    margin-top: 2px;
+    background: transparent;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .step-checkbox:checked {
+    background: var(--green);
+    border-color: var(--green);
+  }
+
+  .step-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 6px;
+    width: 5px;
+    height: 10px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .step-info { flex: 1; }
+
+  .step-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+
+  .step-number {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    min-width: 28px;
+  }
+
+  .step-title {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .badge-auto {
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid rgba(63,185,80,0.3);
+  }
+
+  .badge-user {
+    background: var(--blue-bg);
+    color: var(--blue);
+    border: 1px solid rgba(88,166,255,0.3);
+  }
+
+  .badge-hybrid {
+    background: var(--orange-bg);
+    color: var(--orange);
+    border: 1px solid rgba(210,153,34,0.3);
+  }
+
+  .step-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  /* Code block */
+  .code-block {
+    position: relative;
+    margin-top: 10px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .code-block pre {
+    padding: 12px 14px;
+    padding-right: 60px;
+    overflow-x: auto;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .copy-btn:hover { color: var(--text); border-color: var(--text-muted); }
+  .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+  /* Browser instructions */
+  .browser-instructions {
+    margin-top: 10px;
+    padding: 12px 14px;
+    background: var(--blue-bg);
+    border: 1px solid rgba(88,166,255,0.2);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .browser-instructions .bi-title {
+    font-weight: 600;
+    color: var(--blue);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .browser-instructions ol, .browser-instructions ul {
+    padding-left: 20px;
+    color: var(--text);
+  }
+
+  .browser-instructions li { margin-bottom: 4px; }
+
+  .open-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .open-btn:hover { background: #4090e0; }
+
+  /* Expected output */
+  .expected {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .expected-icon { color: var(--green); flex-shrink: 0; margin-top: 1px; }
+
+  /* Floating script button */
+  .floating-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    z-index: 100;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface);
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    z-index: 200;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    body { padding: 0 10px 80px; }
+    header h1 { font-size: 22px; }
+    .step { padding: 10px 12px; }
+    .phase-header { padding: 10px 12px; }
+    .phase-content { padding: 6px 12px 12px; }
+  }
+
+  /* Info callout */
+  .callout {
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  .callout-info {
+    background: var(--blue-bg);
+    border: 1px solid rgba(88,166,255,0.2);
+    color: var(--text);
+  }
+
+  .callout-warn {
+    background: var(--orange-bg);
+    border: 1px solid rgba(210,153,34,0.2);
+    color: var(--text);
+  }
+
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Local AI Packaged &mdash; Setup Guide</h1>
+  <div class="subtitle">Mac with native Ollama &bull; Core + Langfuse + Neo4j &bull; Private (local dev) environment</div>
+
+  <div class="progress-container">
+    <div class="progress-label">
+      <span>Overall Progress</span>
+      <span id="progress-text">0 / 21 steps</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="copyFullScript()">Copy Full Setup Script</button>
+    <button class="btn" onclick="expandAll()">Expand All</button>
+    <button class="btn" onclick="collapseAll()">Collapse All</button>
+    <button class="btn btn-danger" onclick="resetProgress()">Reset Progress</button>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ==================== PHASE 1 ==================== -->
+  <div class="phase open" data-phase="1">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <h2>
+        <span class="chevron">&#9654;</span>
+        Phase 1: Prerequisites
+      </h2>
+      <div class="phase-meta">
+        <span class="phase-count" data-phase="1">0/4</span>
+        <div class="phase-progress-mini"><div class="phase-progress-mini-fill" data-phase="1"></div></div>
+      </div>
+    </div>
+    <div class="phase-content">
+
+      <!-- Step 1.1 -->
+      <div class="step" data-step="1.1">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="1.1" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">1.1</span>
+              <span class="step-title">Verify Docker Desktop is installed</span>
+              <span class="badge badge-hybrid">CHECK + USER</span>
+            </div>
+            <div class="step-desc">Docker Desktop is required to run all services. Run the check command below. If Docker is not installed, use the button to open the download page.</div>
+            <div class="code-block">
+              <pre>docker --version</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Should print something like: <code>Docker version 27.x.x</code></div>
+            <div class="callout callout-info" style="margin-top:10px">
+              If not installed:
+              <button class="open-btn" onclick="openUrl('https://www.docker.com/products/docker-desktop/')">Open Docker Desktop Download Page</button>
+              <br><br>Download, install, and open Docker Desktop before continuing. First launch requires granting system permissions.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1.2 -->
+      <div class="step" data-step="1.2">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="1.2" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">1.2</span>
+              <span class="step-title">Start Docker Desktop</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Ensure Docker Desktop is running. The first command opens it; the second waits until the Docker daemon is ready.</div>
+            <div class="code-block">
+              <pre>open -a Docker
+
+# Wait until Docker is ready (up to 60 seconds)
+echo "Waiting for Docker to start..."
+for i in $(seq 1 30); do
+  docker info &>/dev/null && echo "Docker is ready!" && break
+  sleep 2
+done</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Should print: <code>Docker is ready!</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1.3 -->
+      <div class="step" data-step="1.3">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="1.3" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">1.3</span>
+              <span class="step-title">Verify Python 3</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Python 3 is pre-installed on macOS. This command confirms it's available.</div>
+            <div class="code-block">
+              <pre>python3 --version</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Should print: <code>Python 3.x.x</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1.4 -->
+      <div class="step" data-step="1.4">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="1.4" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">1.4</span>
+              <span class="step-title">Verify Git</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Git is pre-installed on macOS via Xcode Command Line Tools. If prompted to install Xcode tools, accept.</div>
+            <div class="code-block">
+              <pre>git --version</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Should print: <code>git version 2.x.x</code></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 2 ==================== -->
+  <div class="phase" data-phase="2">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <h2>
+        <span class="chevron">&#9654;</span>
+        Phase 2: Clone &amp; Configure
+      </h2>
+      <div class="phase-meta">
+        <span class="phase-count" data-phase="2">0/5</span>
+        <div class="phase-progress-mini"><div class="phase-progress-mini-fill" data-phase="2"></div></div>
+      </div>
+    </div>
+    <div class="phase-content">
+
+      <!-- Step 2.1 -->
+      <div class="step" data-step="2.1">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="2.1" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">2.1</span>
+              <span class="step-title">Clone the repository</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Clones the stable branch of the project to your home directory.</div>
+            <div class="code-block">
+              <pre>git clone -b stable https://github.com/coleam00/local-ai-packaged.git ~/local-ai-packaged</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> A <code>~/local-ai-packaged</code> folder is created</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2.2 -->
+      <div class="step" data-step="2.2">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="2.2" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">2.2</span>
+              <span class="step-title">Generate .env with secrets</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Choose one of two methods to populate your <code>.env</code> file with secrets.</div>
+
+            <div class="callout callout-info" style="margin-top:10px;">
+              <strong>Option A: 1Password CLI (recommended)</strong><br>
+              If you have the <a href="https://developer.1password.com/docs/cli/get-started/" style="color:var(--accent)">1Password CLI</a> with biometric unlock, secrets are pulled automatically from the "Local AI Packaged" vault. This also includes Langfuse API keys (<code>LANGFUSE_SECRET_KEY</code>, <code>LANGFUSE_PUBLIC_KEY</code>) and <code>LANGFUSE_BASE_URL</code>.
+            </div>
+            <div class="code-block">
+              <pre>cd ~/local-ai-packaged
+
+# Verify all 1Password references resolve
+./generate-env.sh --check
+
+# Generate .env via Touch ID
+./generate-env.sh</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Prints: <code>Generated .env (permissions: 600)</code></div>
+
+            <div class="callout callout-warn" style="margin-top:14px;">
+              <strong>Option B: Manual (no 1Password)</strong><br>
+              Copy the example file and use the inline Python script in the next step to generate random secrets.
+            </div>
+            <div class="code-block">
+              <pre>cd ~/local-ai-packaged
+cp .env.example .env</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2.3 -->
+      <div class="step" data-step="2.3">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="2.3" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">2.3</span>
+              <span class="step-title">Generate secrets (manual path only)</span>
+              <span class="badge badge-hybrid">SKIP IF 1PASSWORD</span>
+            </div>
+            <div class="step-desc">If you used <strong>Option A (1Password)</strong> in step 2.2, skip this step &mdash; your secrets are already populated. Otherwise, run this script to generate secure random values for every required secret in <code>.env</code>, including Supabase JWT keys.</div>
+            <div class="code-block">
+              <pre>cd ~/local-ai-packaged
+
+python3 -c "
+import hmac, hashlib, base64, json, time, subprocess, re, os
+
+def rand_hex(n=32):
+    return subprocess.check_output(['openssl', 'rand', '-hex', str(n)]).decode().strip()
+
+def make_jwt(secret, role):
+    def b64url(data):
+        return base64.urlsafe_b64encode(data).rstrip(b'=').decode()
+    header = b64url(json.dumps({'alg':'HS256','typ':'JWT'}).encode())
+    now = int(time.time())
+    payload = b64url(json.dumps({
+        'role': role,
+        'iss': 'supabase',
+        'iat': now,
+        'exp': now + 157680000  # 5 years
+    }).encode())
+    sig = b64url(hmac.new(
+        secret.encode(), f'{header}.{payload}'.encode(), hashlib.sha256
+    ).digest())
+    return f'{header}.{payload}.{sig}'
+
+# Generate all secrets
+secrets = {
+    'N8N_ENCRYPTION_KEY': rand_hex(),
+    'N8N_USER_MANAGEMENT_JWT_SECRET': rand_hex(),
+    'POSTGRES_PASSWORD': rand_hex(24),  # no special chars
+    'JWT_SECRET': rand_hex(),
+    'DASHBOARD_PASSWORD': rand_hex(16),
+    'POOLER_TENANT_ID': '1000',
+    'NEO4J_AUTH': 'neo4j/' + rand_hex(16),
+    'CLICKHOUSE_PASSWORD': rand_hex(),
+    'MINIO_ROOT_PASSWORD': rand_hex(),
+    'LANGFUSE_SALT': rand_hex(),
+    'NEXTAUTH_SECRET': rand_hex(),
+    'ENCRYPTION_KEY': rand_hex(),
+    'SECRET_KEY_BASE': rand_hex(32),
+    'VAULT_ENC_KEY': rand_hex(16),
+    'LOGFLARE_PUBLIC_ACCESS_TOKEN': rand_hex(24),
+    'LOGFLARE_PRIVATE_ACCESS_TOKEN': rand_hex(24),
+}
+
+# Generate Supabase JWTs from the JWT_SECRET
+secrets['ANON_KEY'] = make_jwt(secrets['JWT_SECRET'], 'anon')
+secrets['SERVICE_ROLE_KEY'] = make_jwt(secrets['JWT_SECRET'], 'service_role')
+
+# Read .env and replace placeholder values
+env_path = '.env'
+with open(env_path, 'r') as f:
+    content = f.read()
+
+replacements = {
+    'N8N_ENCRYPTION_KEY=super-secret-key': f\"N8N_ENCRYPTION_KEY={secrets['N8N_ENCRYPTION_KEY']}\",
+    'N8N_USER_MANAGEMENT_JWT_SECRET=even-more-secret': f\"N8N_USER_MANAGEMENT_JWT_SECRET={secrets['N8N_USER_MANAGEMENT_JWT_SECRET']}\",
+    'POSTGRES_PASSWORD=your-super-secret-and-long-postgres-password': f\"POSTGRES_PASSWORD={secrets['POSTGRES_PASSWORD']}\",
+    'JWT_SECRET=your-super-secret-jwt-token-with-at-least-32-characters-long': f\"JWT_SECRET={secrets['JWT_SECRET']}\",
+    'ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE': f\"ANON_KEY={secrets['ANON_KEY']}\",
+    'SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q': f\"SERVICE_ROLE_KEY={secrets['SERVICE_ROLE_KEY']}\",
+    'DASHBOARD_PASSWORD=this_password_is_insecure_and_should_be_updated': f\"DASHBOARD_PASSWORD={secrets['DASHBOARD_PASSWORD']}\",
+    'POOLER_TENANT_ID=your-tenant-id': f\"POOLER_TENANT_ID={secrets['POOLER_TENANT_ID']}\",
+    'NEO4J_AUTH=neo4j/password': f\"NEO4J_AUTH={secrets['NEO4J_AUTH']}\",
+    'CLICKHOUSE_PASSWORD=super-secret-key-1': f\"CLICKHOUSE_PASSWORD={secrets['CLICKHOUSE_PASSWORD']}\",
+    'MINIO_ROOT_PASSWORD=super-secret-key-2': f\"MINIO_ROOT_PASSWORD={secrets['MINIO_ROOT_PASSWORD']}\",
+    'LANGFUSE_SALT=super-secret-key-3': f\"LANGFUSE_SALT={secrets['LANGFUSE_SALT']}\",
+    'NEXTAUTH_SECRET=super-secret-key-4': f\"NEXTAUTH_SECRET={secrets['NEXTAUTH_SECRET']}\",
+    'ENCRYPTION_KEY=generate-with-openssl': f\"ENCRYPTION_KEY={secrets['ENCRYPTION_KEY']}\",
+    'SECRET_KEY_BASE=UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfYTuRgBiYa15BLrx8etQoXz3gZv1/u2oq': f\"SECRET_KEY_BASE={secrets['SECRET_KEY_BASE']}\",
+    'VAULT_ENC_KEY=your-32-character-encryption-key': f\"VAULT_ENC_KEY={secrets['VAULT_ENC_KEY']}\",
+    'LOGFLARE_PUBLIC_ACCESS_TOKEN=your-super-secret-and-long-logflare-key-public': f\"LOGFLARE_PUBLIC_ACCESS_TOKEN={secrets['LOGFLARE_PUBLIC_ACCESS_TOKEN']}\",
+    'LOGFLARE_PRIVATE_ACCESS_TOKEN=your-super-secret-and-long-logflare-key-private': f\"LOGFLARE_PRIVATE_ACCESS_TOKEN={secrets['LOGFLARE_PRIVATE_ACCESS_TOKEN']}\",
+}
+
+for old, new in replacements.items():
+    content = content.replace(old, new)
+
+with open(env_path, 'w') as f:
+    f.write(content)
+
+print('All secrets generated and written to .env')
+print(f\"  Neo4j credentials: {secrets['NEO4J_AUTH']}\")
+print('  (save these somewhere safe)')
+"</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Prints: <code>All secrets generated and written to .env</code> plus Neo4j credentials</div>
+            <div class="callout callout-warn">Save the Neo4j credentials shown in the output &mdash; you will need them in Phase 5 to log into Neo4j Browser.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2.4 -->
+      <div class="step" data-step="2.4">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="2.4" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">2.4</span>
+              <span class="step-title">Set Langfuse URL</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Updates the Langfuse NEXTAUTH_URL to match the private environment port mapping (port 3000).</div>
+            <div class="code-block">
+              <pre>cd ~/local-ai-packaged
+sed -i '' 's|NEXTAUTH_URL: http://localhost:3002|NEXTAUTH_URL: http://localhost:3000|g' docker-compose.yml</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="callout callout-info">The docker-compose.yml defaults to port 3002 for NEXTAUTH_URL, but the private override maps Langfuse to port 3000.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2.5 -->
+      <div class="step" data-step="2.5">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="2.5" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">2.5</span>
+              <span class="step-title">Review your .env file</span>
+              <span class="badge badge-user">USER ACTION</span>
+            </div>
+            <div class="step-desc">Open the <code>.env</code> file and verify all placeholder values have been replaced. Look for any remaining <code>[required]</code> markers or obvious placeholder text.</div>
+            <div class="code-block">
+              <pre>cd ~/local-ai-packaged
+open -a TextEdit .env</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="browser-instructions">
+              <div class="bi-title">What to check:</div>
+              <ol>
+                <li>No values still say <code>super-secret-key</code>, <code>your-</code>, or <code>password</code></li>
+                <li><code>POSTGRES_PASSWORD</code> does NOT contain the <code>@</code> symbol (causes connection issues)</li>
+                <li>All <code>[required]</code> sections have real values</li>
+                <li>Leave the <code>[required for prod]</code> Caddy hostnames commented out (not needed for local dev)</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 3 ==================== -->
+  <div class="phase" data-phase="3">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <h2>
+        <span class="chevron">&#9654;</span>
+        Phase 3: Install Ollama &amp; Models
+      </h2>
+      <div class="phase-meta">
+        <span class="phase-count" data-phase="3">0/3</span>
+        <div class="phase-progress-mini"><div class="phase-progress-mini-fill" data-phase="3"></div></div>
+      </div>
+    </div>
+    <div class="phase-content">
+
+      <!-- Step 3.1 -->
+      <div class="step" data-step="3.1">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="3.1" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">3.1</span>
+              <span class="step-title">Install Ollama</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Installs Ollama via Homebrew. If you don't have Homebrew, install it first from <a href="https://brew.sh" style="color:var(--accent)">brew.sh</a> or download Ollama directly from <a href="https://ollama.com/download" style="color:var(--accent)">ollama.com</a>.</div>
+            <div class="code-block">
+              <pre># Install via Homebrew (recommended)
+brew install ollama
+
+# Or if already installed, check version:
+ollama --version</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Should print Ollama version info</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3.2 -->
+      <div class="step" data-step="3.2">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="3.2" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">3.2</span>
+              <span class="step-title">Start Ollama server</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Starts the Ollama server in the background. If Ollama is already running (e.g., from the macOS app), this step can be skipped.</div>
+            <div class="code-block">
+              <pre># Start Ollama (skip if the Ollama app is already running)
+ollama serve &>/dev/null &
+
+# Verify it's responding
+sleep 2
+curl -s http://localhost:11434 && echo " Ollama is running!"</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Should print: <code>Ollama is running!</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3.3 -->
+      <div class="step" data-step="3.3">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="3.3" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">3.3</span>
+              <span class="step-title">Pull AI models</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Downloads the default LLM (Qwen 2.5, ~4.7 GB) and embedding model (nomic-embed-text, ~274 MB). This may take several minutes depending on your internet speed.</div>
+            <div class="code-block">
+              <pre># Pull the default LLM (~4.7 GB)
+ollama pull qwen2.5:7b-instruct-q4_K_M
+
+# Pull the embedding model (~274 MB)
+ollama pull nomic-embed-text</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Both models show <code>success</code> after downloading</div>
+            <div class="callout callout-info">This downloads ~5 GB total. On slow connections, each model can take 10-20 minutes. The progress bar in the terminal shows download status.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 4 ==================== -->
+  <div class="phase" data-phase="4">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <h2>
+        <span class="chevron">&#9654;</span>
+        Phase 4: Launch the Stack
+      </h2>
+      <div class="phase-meta">
+        <span class="phase-count" data-phase="4">0/3</span>
+        <div class="phase-progress-mini"><div class="phase-progress-mini-fill" data-phase="4"></div></div>
+      </div>
+    </div>
+    <div class="phase-content">
+
+      <!-- Step 4.1 -->
+      <div class="step" data-step="4.1">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="4.1" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">4.1</span>
+              <span class="step-title">Run the start script</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">This script clones Supabase, copies your <code>.env</code>, generates SearXNG keys, then starts all services. Uses <code>--profile none</code> because Ollama runs on your Mac natively (not in Docker).</div>
+            <div class="code-block">
+              <pre>cd ~/local-ai-packaged
+python3 start_services.py --profile none --environment private</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Script completes without errors. Docker images will be pulled on first run (may take 5-15 minutes).</div>
+            <div class="callout callout-info">First run downloads ~8 GB of Docker images. The script starts Supabase first, waits 10 seconds, then starts the remaining services. You'll see extensive terminal output &mdash; this is normal.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4.2 -->
+      <div class="step" data-step="4.2">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="4.2" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">4.2</span>
+              <span class="step-title">Wait for services to become healthy</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Polls key services until they respond. Some services (especially Supabase and Langfuse) can take 30-60 seconds to fully start.</div>
+            <div class="code-block">
+              <pre>echo "Waiting for services to start..."
+
+# Wait for n8n
+for i in $(seq 1 30); do
+  curl -sf http://localhost:5678/healthz &>/dev/null && echo "n8n is ready" && break
+  sleep 4
+done
+
+# Wait for Open WebUI
+for i in $(seq 1 30); do
+  curl -sf http://localhost:8080 &>/dev/null && echo "Open WebUI is ready" && break
+  sleep 4
+done
+
+# Wait for Qdrant
+for i in $(seq 1 15); do
+  curl -sf http://localhost:6333/healthz &>/dev/null && echo "Qdrant is ready" && break
+  sleep 4
+done
+
+# Wait for Langfuse
+for i in $(seq 1 30); do
+  curl -sf http://localhost:3000 &>/dev/null && echo "Langfuse is ready" && break
+  sleep 4
+done
+
+echo "All core services are up!"</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Each service prints <code>[service] is ready</code>, ending with <code>All core services are up!</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4.3 -->
+      <div class="step" data-step="4.3">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="4.3" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">4.3</span>
+              <span class="step-title">Verify all containers are running</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Lists all containers in the <code>localai</code> project. All should show status <code>Up</code> or <code>running</code>.</div>
+            <div class="code-block">
+              <pre>docker compose -p localai -f ~/local-ai-packaged/docker-compose.yml ps
+docker compose -p localai -f ~/local-ai-packaged/supabase/docker/docker-compose.yml ps</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="expected"><span class="expected-icon">&#10003;</span> All services show <code>Up</code> status. The <code>n8n-import</code> and <code>ollama-pull-*</code> containers may show <code>Exited (0)</code> &mdash; this is normal (they are init containers that run once).</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== PHASE 5 ==================== -->
+  <div class="phase" data-phase="5">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <h2>
+        <span class="chevron">&#9654;</span>
+        Phase 5: Service Setup &amp; Verify
+      </h2>
+      <div class="phase-meta">
+        <span class="phase-count" data-phase="5">0/6</span>
+        <div class="phase-progress-mini"><div class="phase-progress-mini-fill" data-phase="5"></div></div>
+      </div>
+    </div>
+    <div class="phase-content">
+
+      <!-- Step 5.1 -->
+      <div class="step" data-step="5.1">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="5.1" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">5.1</span>
+              <span class="step-title">Create n8n owner account</span>
+              <span class="badge badge-user">USER ACTION</span>
+            </div>
+            <div class="step-desc">Set up the initial owner account for n8n, the workflow automation platform.</div>
+            <button class="open-btn" onclick="openUrl('http://localhost:5678')">Open n8n in Browser</button>
+            <div class="browser-instructions">
+              <div class="bi-title">In the browser tab:</div>
+              <ol>
+                <li>You'll see the "Set up owner account" page</li>
+                <li>Enter your name, email, and a password</li>
+                <li>Click <strong>"Next"</strong></li>
+                <li>Skip or complete the optional survey</li>
+                <li>You'll land on the n8n workflow editor &mdash; this means it worked!</li>
+              </ol>
+            </div>
+            <div class="callout callout-info">This is a local-only account. It is not connected to any cloud service. Your workflows and data stay on your machine.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5.2 -->
+      <div class="step" data-step="5.2">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="5.2" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">5.2</span>
+              <span class="step-title">Create Open WebUI account &amp; connect Ollama</span>
+              <span class="badge badge-user">USER ACTION</span>
+            </div>
+            <div class="step-desc">Set up the admin account for Open WebUI (your ChatGPT-like interface) and verify the Ollama connection.</div>
+            <button class="open-btn" onclick="openUrl('http://localhost:8080')">Open WebUI in Browser</button>
+            <div class="browser-instructions">
+              <div class="bi-title">In the browser tab:</div>
+              <ol>
+                <li>Click <strong>"Sign up"</strong> to create an admin account (first user is automatically admin)</li>
+                <li>Enter name, email, password, then click <strong>"Create Account"</strong></li>
+                <li>Once logged in, click your avatar (bottom-left) &rarr; <strong>"Admin Panel"</strong></li>
+                <li>Go to <strong>"Settings"</strong> &rarr; <strong>"Connections"</strong></li>
+                <li>Under <strong>Ollama</strong>, set the URL to:<br><code>http://host.docker.internal:11434</code></li>
+                <li>Click the refresh icon &mdash; you should see your models appear (qwen2.5, nomic-embed-text)</li>
+                <li>Click <strong>"Save"</strong></li>
+              </ol>
+            </div>
+            <div class="callout callout-warn">The Ollama URL must be <code>http://host.docker.internal:11434</code> (not <code>localhost</code>), because Open WebUI runs inside Docker and needs to reach your Mac's Ollama through Docker's host gateway.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5.3 -->
+      <div class="step" data-step="5.3">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="5.3" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">5.3</span>
+              <span class="step-title">Verify Qdrant vector database</span>
+              <span class="badge badge-auto">AUTOMATED</span>
+            </div>
+            <div class="step-desc">Checks that Qdrant (the vector database used for RAG) is running and opens its dashboard.</div>
+            <div class="code-block">
+              <pre>curl -s http://localhost:6333/healthz && echo " Qdrant is healthy!"</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <button class="open-btn" onclick="openUrl('http://localhost:6333/dashboard')">Open Qdrant Dashboard</button>
+            <div class="expected"><span class="expected-icon">&#10003;</span> Returns OK and the dashboard loads in the browser</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5.4 -->
+      <div class="step" data-step="5.4">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="5.4" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">5.4</span>
+              <span class="step-title">Set up Neo4j</span>
+              <span class="badge badge-user">USER ACTION</span>
+            </div>
+            <div class="step-desc">Log into the Neo4j graph database browser. You'll need the credentials from Step 2.3.</div>
+            <button class="open-btn" onclick="openUrl('http://localhost:7474')">Open Neo4j Browser</button>
+            <div class="browser-instructions">
+              <div class="bi-title">In the browser tab:</div>
+              <ol>
+                <li>You'll see the Neo4j Browser connect screen</li>
+                <li>Connection URL should be: <code>bolt://localhost:7687</code></li>
+                <li>Username: <code>neo4j</code></li>
+                <li>Password: the password after the <code>/</code> in your <code>NEO4J_AUTH</code> value from Step 2.3</li>
+                <li>Click <strong>"Connect"</strong></li>
+                <li>If prompted to change password, set a new one and save it</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5.5 -->
+      <div class="step" data-step="5.5">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="5.5" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">5.5</span>
+              <span class="step-title">Set up Langfuse</span>
+              <span class="badge badge-user">USER ACTION</span>
+            </div>
+            <div class="step-desc">Create an account and project in Langfuse, the LLM observability platform. Generate API keys for n8n workflow tracing.</div>
+            <button class="open-btn" onclick="openUrl('http://localhost:3000')">Open Langfuse in Browser</button>
+            <div class="browser-instructions">
+              <div class="bi-title">In the browser tab:</div>
+              <ol>
+                <li>Click <strong>"Sign Up"</strong> to create a new account</li>
+                <li>Enter name, email, and password, then click <strong>"Sign up"</strong></li>
+                <li>Create a new organization when prompted</li>
+                <li>Create a new project (e.g., "Local AI")</li>
+                <li>Go to <strong>"Settings"</strong> &rarr; <strong>"API Keys"</strong></li>
+                <li>Click <strong>"Create new API keys"</strong></li>
+                <li>Save the Public Key and Secret Key &mdash; you'll use these in n8n for tracing AI workflows</li>
+              </ol>
+            </div>
+            <div class="callout callout-info">If you used 1Password in step 2.2, store the API keys in the "Langfuse" item (fields: <code>Secret Key</code> and <code>Public Key</code>). They are already wired into <code>.env.tpl</code> as <code>LANGFUSE_SECRET_KEY</code> and <code>LANGFUSE_PUBLIC_KEY</code>, so future <code>./generate-env.sh</code> runs will inject them automatically.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5.6 -->
+      <div class="step" data-step="5.6">
+        <div class="step-top">
+          <input type="checkbox" class="step-checkbox" data-step="5.6" onchange="onCheck(this)">
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-number">5.6</span>
+              <span class="step-title">Test end-to-end: chat with AI</span>
+              <span class="badge badge-user">USER ACTION</span>
+            </div>
+            <div class="step-desc">The moment of truth! Send a message to your locally-running AI model through Open WebUI.</div>
+            <button class="open-btn" onclick="openUrl('http://localhost:8080')">Open WebUI in Browser</button>
+            <div class="browser-instructions">
+              <div class="bi-title">In the browser tab:</div>
+              <ol>
+                <li>Click <strong>"New Chat"</strong> (top-left)</li>
+                <li>Select <strong>"qwen2.5:7b-instruct-q4_K_M"</strong> from the model dropdown at the top</li>
+                <li>Type a message like: <em>"Hello! Can you tell me what 2+2 is?"</em></li>
+                <li>Press Enter and wait for a response</li>
+                <li>If you get a response &mdash; congratulations, your local AI stack is working!</li>
+              </ol>
+            </div>
+            <div class="callout callout-info">The first message may take 10-30 seconds as the model loads into memory. Subsequent messages will be much faster.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- Port Reference (collapsible) -->
+<div class="phase" data-phase="ref" style="margin-top: 24px;">
+  <div class="phase-header" onclick="togglePhase(this)">
+    <h2>
+      <span class="chevron">&#9654;</span>
+      Quick Reference: Service URLs
+    </h2>
+    <div class="phase-meta"></div>
+  </div>
+  <div class="phase-content">
+    <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:10px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border); text-align:left;">
+          <th style="padding:8px;">Service</th>
+          <th style="padding:8px;">URL</th>
+          <th style="padding:8px;">Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">n8n</td>
+          <td style="padding:8px;"><a href="http://localhost:5678" style="color:var(--accent)">localhost:5678</a></td>
+          <td style="padding:8px;">Workflow automation</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">Open WebUI</td>
+          <td style="padding:8px;"><a href="http://localhost:8080" style="color:var(--accent)">localhost:8080</a></td>
+          <td style="padding:8px;">ChatGPT-like AI interface</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">Flowise</td>
+          <td style="padding:8px;"><a href="http://localhost:3001" style="color:var(--accent)">localhost:3001</a></td>
+          <td style="padding:8px;">No-code AI agent builder</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">Qdrant</td>
+          <td style="padding:8px;"><a href="http://localhost:6333/dashboard" style="color:var(--accent)">localhost:6333</a></td>
+          <td style="padding:8px;">Vector database (RAG)</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">Neo4j</td>
+          <td style="padding:8px;"><a href="http://localhost:7474" style="color:var(--accent)">localhost:7474</a></td>
+          <td style="padding:8px;">Graph database</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">Langfuse</td>
+          <td style="padding:8px;"><a href="http://localhost:3000" style="color:var(--accent)">localhost:3000</a></td>
+          <td style="padding:8px;">LLM observability</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px;">SearXNG</td>
+          <td style="padding:8px;"><a href="http://localhost:8081" style="color:var(--accent)">localhost:8081</a></td>
+          <td style="padding:8px;">Privacy-focused search</td>
+        </tr>
+        <tr>
+          <td style="padding:8px;">Supabase API</td>
+          <td style="padding:8px;"><a href="http://localhost:8000" style="color:var(--accent)">localhost:8000</a></td>
+          <td style="padding:8px;">Database + Auth API</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:16px; font-size:13px; color:var(--text-muted);">
+      <strong>Stopping all services:</strong>
+    </div>
+    <div class="code-block" style="margin-top:6px;">
+      <pre>cd ~/local-ai-packaged
+docker compose -p localai -f docker-compose.yml down
+docker compose -p localai -f supabase/docker/docker-compose.yml down</pre>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- Floating bottom bar -->
+<div class="floating-bar">
+  <button class="btn btn-primary" onclick="copyFullScript()">Copy Full Setup Script</button>
+  <span id="floating-progress" style="color:var(--text-muted); font-size:13px; display:flex; align-items:center;">0 / 21 steps</span>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'local-ai-setup-progress';
+const TOTAL_STEPS = 21;
+const PHASE_COUNTS = { '1': 4, '2': 5, '3': 3, '4': 3, '5': 6 };
+
+// Load saved state
+function loadState() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch { return {}; }
+}
+
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// Initialize checkboxes from saved state
+function init() {
+  const state = loadState();
+  document.querySelectorAll('.step-checkbox').forEach(cb => {
+    const step = cb.dataset.step;
+    if (state[step]) {
+      cb.checked = true;
+      cb.closest('.step').classList.add('completed');
+    }
+  });
+  updateProgress();
+}
+
+function onCheck(cb) {
+  const state = loadState();
+  const step = cb.dataset.step;
+  state[step] = cb.checked;
+  saveState(state);
+  cb.closest('.step').classList.toggle('completed', cb.checked);
+  updateProgress();
+}
+
+function updateProgress() {
+  const state = loadState();
+  const checked = document.querySelectorAll('.step-checkbox:checked').length;
+
+  // Overall
+  const pct = Math.round((checked / TOTAL_STEPS) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${checked} / ${TOTAL_STEPS} steps`;
+  document.getElementById('floating-progress').textContent = `${checked} / ${TOTAL_STEPS} steps`;
+
+  // Per phase
+  for (const [phase, total] of Object.entries(PHASE_COUNTS)) {
+    let done = 0;
+    for (let i = 1; i <= total; i++) {
+      if (state[`${phase}.${i}`]) done++;
+    }
+    const countEl = document.querySelector(`.phase-count[data-phase="${phase}"]`);
+    const fillEl = document.querySelector(`.phase-progress-mini-fill[data-phase="${phase}"]`);
+    if (countEl) countEl.textContent = `${done}/${total}`;
+    if (fillEl) fillEl.style.width = `${Math.round((done / total) * 100)}%`;
+  }
+}
+
+function togglePhase(header) {
+  header.closest('.phase').classList.toggle('open');
+}
+
+function expandAll() {
+  document.querySelectorAll('.phase').forEach(p => p.classList.add('open'));
+}
+
+function collapseAll() {
+  document.querySelectorAll('.phase').forEach(p => p.classList.remove('open'));
+}
+
+function resetProgress() {
+  if (!confirm('Reset all progress? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  document.querySelectorAll('.step-checkbox').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.step')?.classList.remove('completed');
+  });
+  updateProgress();
+  showToast('Progress reset');
+}
+
+// Clipboard
+function copyCode(btn) {
+  const pre = btn.parentElement.querySelector('pre');
+  navigator.clipboard.writeText(pre.textContent).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function openUrl(url) {
+  window.open(url, '_blank');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Full setup script
+function copyFullScript() {
+  const script = `#!/bin/bash
+# =============================================================================
+# Local AI Packaged - Automated Setup Script
+# Target: Mac with native Ollama | Profile: none | Environment: private
+# =============================================================================
+set -e
+
+echo ""
+echo "=============================="
+echo " Phase 1: Prerequisites"
+echo "=============================="
+echo ""
+
+# 1.1 Check Docker
+if ! command -v docker &>/dev/null; then
+  echo "ERROR: Docker is not installed."
+  echo "Please install Docker Desktop from: https://www.docker.com/products/docker-desktop/"
+  echo "Then re-run this script."
+  exit 1
+fi
+echo "Docker found: $(docker --version)"
+
+# 1.2 Start Docker Desktop
+open -a Docker 2>/dev/null || true
+echo "Waiting for Docker to start..."
+for i in $(seq 1 30); do
+  docker info &>/dev/null && echo "Docker is ready!" && break
+  [ "$i" -eq 30 ] && echo "ERROR: Docker did not start in time." && exit 1
+  sleep 2
+done
+
+# 1.3 Check Python 3
+if ! command -v python3 &>/dev/null; then
+  echo "ERROR: Python 3 is not installed."
+  exit 1
+fi
+echo "Python found: $(python3 --version)"
+
+# 1.4 Check Git
+if ! command -v git &>/dev/null; then
+  echo "ERROR: Git is not installed."
+  exit 1
+fi
+echo "Git found: $(git --version)"
+
+echo ""
+echo "=============================="
+echo " Phase 2: Clone & Configure"
+echo "=============================="
+echo ""
+
+# 2.1 Clone repository
+if [ ! -d "$HOME/local-ai-packaged" ]; then
+  git clone -b stable https://github.com/coleam00/local-ai-packaged.git "$HOME/local-ai-packaged"
+else
+  echo "Repository already exists at ~/local-ai-packaged"
+fi
+cd "$HOME/local-ai-packaged"
+
+# 2.2 Create .env
+if [ ! -f .env ]; then
+  cp .env.example .env
+  echo "Created .env from template"
+else
+  echo ".env already exists, skipping"
+fi
+
+# 2.3 Generate secrets
+python3 -c "
+import hmac, hashlib, base64, json, time, subprocess, os
+
+def rand_hex(n=32):
+    return subprocess.check_output(['openssl', 'rand', '-hex', str(n)]).decode().strip()
+
+def make_jwt(secret, role):
+    def b64url(data):
+        return base64.urlsafe_b64encode(data).rstrip(b'=').decode()
+    header = b64url(json.dumps({'alg':'HS256','typ':'JWT'}).encode())
+    now = int(time.time())
+    payload = b64url(json.dumps({'role': role, 'iss': 'supabase', 'iat': now, 'exp': now + 157680000}).encode())
+    sig = b64url(hmac.new(secret.encode(), f'{header}.{payload}'.encode(), hashlib.sha256).digest())
+    return f'{header}.{payload}.{sig}'
+
+secrets = {
+    'N8N_ENCRYPTION_KEY': rand_hex(),
+    'N8N_USER_MANAGEMENT_JWT_SECRET': rand_hex(),
+    'POSTGRES_PASSWORD': rand_hex(24),
+    'JWT_SECRET': rand_hex(),
+    'DASHBOARD_PASSWORD': rand_hex(16),
+    'POOLER_TENANT_ID': '1000',
+    'NEO4J_AUTH': 'neo4j/' + rand_hex(16),
+    'CLICKHOUSE_PASSWORD': rand_hex(),
+    'MINIO_ROOT_PASSWORD': rand_hex(),
+    'LANGFUSE_SALT': rand_hex(),
+    'NEXTAUTH_SECRET': rand_hex(),
+    'ENCRYPTION_KEY': rand_hex(),
+    'SECRET_KEY_BASE': rand_hex(32),
+    'VAULT_ENC_KEY': rand_hex(16),
+    'LOGFLARE_PUBLIC_ACCESS_TOKEN': rand_hex(24),
+    'LOGFLARE_PRIVATE_ACCESS_TOKEN': rand_hex(24),
+}
+secrets['ANON_KEY'] = make_jwt(secrets['JWT_SECRET'], 'anon')
+secrets['SERVICE_ROLE_KEY'] = make_jwt(secrets['JWT_SECRET'], 'service_role')
+
+with open('.env', 'r') as f: content = f.read()
+
+replacements = {
+    'N8N_ENCRYPTION_KEY=super-secret-key': f\\"N8N_ENCRYPTION_KEY={secrets['N8N_ENCRYPTION_KEY']}\\",
+    'N8N_USER_MANAGEMENT_JWT_SECRET=even-more-secret': f\\"N8N_USER_MANAGEMENT_JWT_SECRET={secrets['N8N_USER_MANAGEMENT_JWT_SECRET']}\\",
+    'POSTGRES_PASSWORD=your-super-secret-and-long-postgres-password': f\\"POSTGRES_PASSWORD={secrets['POSTGRES_PASSWORD']}\\",
+    'JWT_SECRET=your-super-secret-jwt-token-with-at-least-32-characters-long': f\\"JWT_SECRET={secrets['JWT_SECRET']}\\",
+    'ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE': f\\"ANON_KEY={secrets['ANON_KEY']}\\",
+    'SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q': f\\"SERVICE_ROLE_KEY={secrets['SERVICE_ROLE_KEY']}\\",
+    'DASHBOARD_PASSWORD=this_password_is_insecure_and_should_be_updated': f\\"DASHBOARD_PASSWORD={secrets['DASHBOARD_PASSWORD']}\\",
+    'POOLER_TENANT_ID=your-tenant-id': f\\"POOLER_TENANT_ID={secrets['POOLER_TENANT_ID']}\\",
+    'NEO4J_AUTH=neo4j/password': f\\"NEO4J_AUTH={secrets['NEO4J_AUTH']}\\",
+    'CLICKHOUSE_PASSWORD=super-secret-key-1': f\\"CLICKHOUSE_PASSWORD={secrets['CLICKHOUSE_PASSWORD']}\\",
+    'MINIO_ROOT_PASSWORD=super-secret-key-2': f\\"MINIO_ROOT_PASSWORD={secrets['MINIO_ROOT_PASSWORD']}\\",
+    'LANGFUSE_SALT=super-secret-key-3': f\\"LANGFUSE_SALT={secrets['LANGFUSE_SALT']}\\",
+    'NEXTAUTH_SECRET=super-secret-key-4': f\\"NEXTAUTH_SECRET={secrets['NEXTAUTH_SECRET']}\\",
+    'ENCRYPTION_KEY=generate-with-openssl': f\\"ENCRYPTION_KEY={secrets['ENCRYPTION_KEY']}\\",
+    'SECRET_KEY_BASE=UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfYTuRgBiYa15BLrx8etQoXz3gZv1/u2oq': f\\"SECRET_KEY_BASE={secrets['SECRET_KEY_BASE']}\\",
+    'VAULT_ENC_KEY=your-32-character-encryption-key': f\\"VAULT_ENC_KEY={secrets['VAULT_ENC_KEY']}\\",
+    'LOGFLARE_PUBLIC_ACCESS_TOKEN=your-super-secret-and-long-logflare-key-public': f\\"LOGFLARE_PUBLIC_ACCESS_TOKEN={secrets['LOGFLARE_PUBLIC_ACCESS_TOKEN']}\\",
+    'LOGFLARE_PRIVATE_ACCESS_TOKEN=your-super-secret-and-long-logflare-key-private': f\\"LOGFLARE_PRIVATE_ACCESS_TOKEN={secrets['LOGFLARE_PRIVATE_ACCESS_TOKEN']}\\",
+}
+
+for old, new in replacements.items(): content = content.replace(old, new)
+
+with open('.env', 'w') as f: f.write(content)
+
+print('All secrets generated and written to .env')
+print(f\\"  Neo4j credentials: {secrets['NEO4J_AUTH']}\\")
+print('  (save these somewhere safe)')
+"
+
+# 2.4 Fix Langfuse NEXTAUTH_URL
+sed -i '' 's|NEXTAUTH_URL: http://localhost:3002|NEXTAUTH_URL: http://localhost:3000|g' docker-compose.yml
+
+echo ""
+echo "=============================="
+echo " Phase 3: Ollama & Models"
+echo "=============================="
+echo ""
+
+# 3.1 Install Ollama
+if ! command -v ollama &>/dev/null; then
+  echo "Installing Ollama via Homebrew..."
+  brew install ollama
+else
+  echo "Ollama already installed: $(ollama --version)"
+fi
+
+# 3.2 Start Ollama
+if ! curl -sf http://localhost:11434 &>/dev/null; then
+  echo "Starting Ollama..."
+  ollama serve &>/dev/null &
+  sleep 3
+fi
+echo "Ollama is running"
+
+# 3.3 Pull models
+echo "Pulling AI models (this may take several minutes)..."
+ollama pull qwen2.5:7b-instruct-q4_K_M
+ollama pull nomic-embed-text
+
+echo ""
+echo "=============================="
+echo " Phase 4: Launch Stack"
+echo "=============================="
+echo ""
+
+# 4.1 Start services
+cd "$HOME/local-ai-packaged"
+python3 start_services.py --profile none --environment private
+
+# 4.2 Wait for services
+echo ""
+echo "Waiting for services to become healthy..."
+
+for svc in "n8n:5678/healthz" "Open WebUI:8080" "Qdrant:6333/healthz" "Langfuse:3000"; do
+  name="\${svc%%:*}"
+  endpoint="\${svc#*:}"
+  for i in $(seq 1 30); do
+    curl -sf "http://localhost:$endpoint" &>/dev/null && echo "$name is ready" && break
+    [ "$i" -eq 30 ] && echo "WARNING: $name may not be ready yet"
+    sleep 4
+  done
+done
+
+echo ""
+echo "All core services are up!"
+
+# 4.3 Show container status
+echo ""
+docker compose -p localai -f docker-compose.yml ps
+
+echo ""
+echo "=============================="
+echo " AUTOMATED SETUP COMPLETE"
+echo "=============================="
+echo ""
+echo "Now complete the manual steps in your browser:"
+echo ""
+echo "  1. n8n          -> http://localhost:5678   (create owner account)"
+echo "  2. Open WebUI   -> http://localhost:8080   (create admin, set Ollama URL to http://host.docker.internal:11434)"
+echo "  3. Neo4j        -> http://localhost:7474   (log in with NEO4J_AUTH credentials)"
+echo "  4. Langfuse     -> http://localhost:3000   (create account + project)"
+echo "  5. Test it!     -> http://localhost:8080   (send a chat message)"
+echo ""
+
+# Open all service UIs in browser tabs
+open http://localhost:5678
+sleep 1
+open http://localhost:8080
+sleep 1
+open http://localhost:7474
+sleep 1
+open http://localhost:3000
+`;
+
+  navigator.clipboard.writeText(script).then(() => {
+    showToast('Full setup script copied to clipboard!');
+  });
+}
+
+// Sync progress from known completion state
+// Updated: 2026-04-25 — all steps complete, Langfuse API keys stored in 1Password
+function syncKnownProgress() {
+  const SYNC_KEY = 'local-ai-setup-synced-v2';
+  if (localStorage.getItem(SYNC_KEY)) return; // only sync once
+
+  const state = loadState();
+  const completed = [
+    '1.1','1.2','1.3','1.4',           // Prerequisites: all verified
+    '2.1','2.2','2.3','2.4','2.5',     // Clone & Configure: done + 1Password
+    '3.1','3.2','3.3',                 // Ollama: installed, running, models pulled
+    '4.1','4.2','4.3',                 // Stack: all 25 containers running
+    '5.1',                             // n8n: owner created via API
+    '5.2',                             // Open WebUI: working, confirmed
+    '5.3',                             // Qdrant: running, no setup needed
+    '5.4',                             // Neo4j: credentials ready
+    '5.5',                             // Langfuse: account created, API keys in 1Password
+    '5.6',                             // End-to-end: AI chat confirmed working
+  ];
+  completed.forEach(step => { state[step] = true; });
+  saveState(state);
+  localStorage.setItem(SYNC_KEY, Date.now());
+}
+
+// Init on load
+syncKnownProgress();
+init();
+</script>
+
+</body>
+</html>

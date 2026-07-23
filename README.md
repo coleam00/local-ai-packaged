@@ -8,7 +8,17 @@ This is Cole's version with a couple of improvements and the addition of Supabas
 Also, the local RAG AI Agent workflows from the video will be automatically in your 
 n8n instance if you use this setup instead of the base one provided by n8n!
 
-**IMPORANT**: Supabase has updated a couple environment variables so you may have to add some new default values in your .env that I have in my .env.example if you have had this project up and running already and are just pulling new changes. Specifically, you need to add "POOLER_DB_POOL_SIZE=5" to your .env. This is required if you have had the package running before June 14th.
+> [!IMPORTANT]
+> **Pulling the latest changes after having the package running already?** Supabase keeps moving environment variables out of its Docker Compose file and into `.env`, so you may need to add new defaults that are already in my `.env.example`. Most recently, the Storage service started requiring its own config in `.env` — if it's missing, the `supabase-storage` container crashes on startup with a `region is missing` error. Add the following to your `.env`:
+>
+> ```
+> REGION=stub
+> GLOBAL_S3_BUCKET=stub
+> STORAGE_TENANT_ID=stub
+> S3_PROTOCOL_ACCESS_KEY_ID=625729a08b95bf1b7ff351a663f3a23c
+> S3_PROTOCOL_ACCESS_KEY_SECRET=850181e4652dd023b7a98c58ae0d2d34bd487ee0cc3254aed6eda37307425907
+> POOLER_DB_POOL_SIZE=5
+> ```
 
 ## Important Links
 
@@ -72,7 +82,25 @@ git clone -b stable https://github.com/coleam00/local-ai-packaged.git
 cd local-ai-packaged
 ```
 
-Before running the services, you need to set up your environment variables for Supabase following their [self-hosting guide](https://supabase.com/docs/guides/self-hosting/docker#securing-your-services).
+Before running the services, you need to set up your environment variables. There are two methods:
+
+### Option A: 1Password CLI (recommended)
+
+If you use [1Password CLI](https://developer.1password.com/docs/cli/get-started/) with biometric unlock, secrets can be pulled automatically from the "Local AI Packaged" vault:
+
+```bash
+# Verify all 1Password references resolve
+./generate-env.sh --check
+
+# Generate .env from 1Password (Touch ID)
+./generate-env.sh
+```
+
+This reads `.env.tpl` (committed, contains only `op://` references) and produces a `.env` with real secrets injected. The generated `.env` is gitignored with permissions set to 600.
+
+The template includes Langfuse API keys (`LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`) and `LANGFUSE_BASE_URL` for n8n workflow integration.
+
+### Option B: Manual setup
 
 1. Make a copy of `.env.example` and rename it to `.env` in the root directory of the project
 2. Set the following required environment variables:

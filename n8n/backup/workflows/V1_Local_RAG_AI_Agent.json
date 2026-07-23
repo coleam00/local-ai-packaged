@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "model": "llama3.1:latest",
+        "model": "qwen3.5:9b",
         "options": {}
       },
       "id": "c7632a7c-2661-492e-bd6f-aab994818998",
@@ -40,7 +40,7 @@
     },
     {
       "parameters": {
-        "model": "llama3.1:latest",
+        "model": "qwen3.5:9b",
         "options": {}
       },
       "id": "73d773a4-5c72-4af3-a52d-144f0e417823",

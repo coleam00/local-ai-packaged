@@ -20,24 +20,85 @@ def run_command(cmd, cwd=None):
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, cwd=cwd, check=True)
 
+def get_pinned_supabase_revision():
+    """Return the Supabase revision recorded by the root repository, if available."""
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD:supabase"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def checkout_pinned_supabase_revision(supabase_path):
+    """Keep the nested Supabase checkout aligned with the root Git link."""
+    revision = get_pinned_supabase_revision()
+    if not revision:
+        print("No root-pinned Supabase revision found; leaving the existing checkout unchanged.")
+        return
+
+    current = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=supabase_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if current.returncode == 0 and current.stdout.strip() == revision:
+        print(f"Supabase is already at the root-pinned revision {revision}.")
+        return
+
+    status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=supabase_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if status.returncode != 0:
+        raise RuntimeError("Could not inspect the Supabase checkout before changing revisions.")
+    if status.stdout.strip():
+        raise RuntimeError(
+            "Supabase has uncommitted changes; refusing to change its revision. "
+            "Commit or stash those changes before starting the stack."
+        )
+
+    available = subprocess.run(
+        ["git", "cat-file", "-e", f"{revision}^{{commit}}"],
+        cwd=supabase_path,
+        capture_output=True,
+        check=False,
+    )
+    if available.returncode != 0:
+        run_command(["git", "fetch", "--filter=blob:none", "origin", "master"], cwd=supabase_path)
+
+    print(f"Checking out root-pinned Supabase revision {revision}...")
+    run_command(["git", "checkout", "--detach", revision], cwd=supabase_path)
+
+
 def clone_supabase_repo():
-    """Clone the Supabase repository using sparse checkout if not already present."""
-    if not os.path.exists("supabase"):
+    """Clone Supabase sparsely and keep it at the root repository's pinned revision."""
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    supabase_path = os.path.join(repo_root, "supabase")
+
+    if not os.path.exists(supabase_path):
         print("Cloning the Supabase repository...")
         run_command([
             "git", "clone", "--filter=blob:none", "--no-checkout",
-            "https://github.com/supabase/supabase.git"
+            "https://github.com/supabase/supabase.git",
+            supabase_path,
         ])
-        os.chdir("supabase")
-        run_command(["git", "sparse-checkout", "init", "--cone"])
-        run_command(["git", "sparse-checkout", "set", "docker"])
-        run_command(["git", "checkout", "master"])
-        os.chdir("..")
+        run_command(["git", "sparse-checkout", "init", "--cone"], cwd=supabase_path)
+        run_command(["git", "sparse-checkout", "set", "docker"], cwd=supabase_path)
     else:
-        print("Supabase repository already exists, updating...")
-        os.chdir("supabase")
-        run_command(["git", "pull"])
-        os.chdir("..")
+        print("Supabase repository already exists; honoring the root-pinned revision.")
+
+    checkout_pinned_supabase_revision(supabase_path)
 
 def prepare_supabase_env():
     """Copy .env to .env in supabase/docker."""
