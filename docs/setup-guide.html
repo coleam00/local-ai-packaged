@@ -914,17 +914,17 @@ curl -s http://localhost:11434 && echo " Ollama is running!"</pre>
               <span class="step-title">Pull AI models</span>
               <span class="badge badge-auto">AUTOMATED</span>
             </div>
-            <div class="step-desc">Downloads the default LLM (Qwen 2.5, ~4.7 GB) and embedding model (nomic-embed-text, ~274 MB). This may take several minutes depending on your internet speed.</div>
+            <div class="step-desc">Downloads the default LLM (Qwen 3.5) and embedding model (nomic-embed-text). This may take several minutes depending on your internet speed.</div>
             <div class="code-block">
               <pre># Pull the default LLM (~4.7 GB)
-ollama pull qwen2.5:7b-instruct-q4_K_M
+ollama pull qwen3.5:9b
 
 # Pull the embedding model (~274 MB)
 ollama pull nomic-embed-text</pre>
               <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="expected"><span class="expected-icon">&#10003;</span> Both models show <code>success</code> after downloading</div>
-            <div class="callout callout-info">This downloads ~5 GB total. On slow connections, each model can take 10-20 minutes. The progress bar in the terminal shows download status.</div>
+            <div class="callout callout-info">On slow connections, model downloads can take 10-20 minutes. The progress bar in the terminal shows download status.</div>
           </div>
         </div>
       </div>
@@ -1099,7 +1099,7 @@ docker compose -p localai -f ~/local-ai-packaged/supabase/docker/docker-compose.
                 <li>Once logged in, click your avatar (bottom-left) &rarr; <strong>"Admin Panel"</strong></li>
                 <li>Go to <strong>"Settings"</strong> &rarr; <strong>"Connections"</strong></li>
                 <li>Under <strong>Ollama</strong>, set the URL to:<br><code>http://host.docker.internal:11434</code></li>
-                <li>Click the refresh icon &mdash; you should see your models appear (qwen2.5, nomic-embed-text)</li>
+                <li>Click the refresh icon &mdash; you should see your models appear (qwen3.5:9b, nomic-embed-text)</li>
                 <li>Click <strong>"Save"</strong></li>
               </ol>
             </div>
@@ -1201,7 +1201,7 @@ docker compose -p localai -f ~/local-ai-packaged/supabase/docker/docker-compose.
               <div class="bi-title">In the browser tab:</div>
               <ol>
                 <li>Click <strong>"New Chat"</strong> (top-left)</li>
-                <li>Select <strong>"qwen2.5:7b-instruct-q4_K_M"</strong> from the model dropdown at the top</li>
+                <li>Select <strong>"qwen3.5:9b"</strong> from the model dropdown at the top</li>
                 <li>Type a message like: <em>"Hello! Can you tell me what 2+2 is?"</em></li>
                 <li>Press Enter and wait for a response</li>
                 <li>If you get a response &mdash; congratulations, your local AI stack is working!</li>
@@ -1570,7 +1570,7 @@ echo "Ollama is running"
 
 # 3.3 Pull models
 echo "Pulling AI models (this may take several minutes)..."
-ollama pull qwen2.5:7b-instruct-q4_K_M
+ollama pull qwen3.5:9b
 ollama pull nomic-embed-text
 
 echo ""

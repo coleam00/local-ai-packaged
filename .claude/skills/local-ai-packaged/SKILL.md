@@ -83,7 +83,7 @@ docker exec -it supabase-db psql -U supabase_admin -d postgres
 docker exec -it ollama ollama list
 ```
 
-`start_services.py` always: clones/updates the Supabase repo (sparse checkout `docker/`), copies `.env` into `supabase/docker/.env`, generates the SearXNG secret if missing, handles the SearXNG `cap_drop` first-run workaround, brings down old containers, starts Supabase first, sleeps 10s, then starts the AI stack.
+`start_services.py` always: clones Supabase sparsely when absent and otherwise keeps it at the root repository's pinned revision, copies `.env` into `supabase/docker/.env`, generates the SearXNG secret if missing, handles the SearXNG `cap_drop` first-run workaround, brings down old containers, starts Supabase first, sleeps 10s, then starts the AI stack.
 
 ## Configuration
 
@@ -120,7 +120,7 @@ PG_META_CRYPTO_KEY=<32-hex-chars>   # supabase-meta won't start without it
 
 | Profile | Effect |
 |---|---|
-| `cpu` | Adds `ollama-cpu` + `ollama-pull-llama-cpu` (auto-pulls `qwen2.5:7b-instruct-q4_K_M` and `nomic-embed-text`) |
+| `cpu` | Adds `ollama-cpu` + `ollama-pull-llama-cpu` (auto-pulls `${OLLAMA_MODEL:-qwen3.5:9b}` and `nomic-embed-text`) |
 | `gpu-nvidia` | NVIDIA passthrough (requires NVIDIA Container Toolkit) |
 | `gpu-amd` | ROCm image |
 | `none` | No Ollama container — assumes host-side `ollama serve` (Mac) |

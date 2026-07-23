@@ -188,4 +188,10 @@ S3_PROTOCOL_ACCESS_KEY_ID=stub
 S3_PROTOCOL_ACCESS_KEY_SECRET=stub
 IMGPROXY_AUTO_WEBP=true
 PG_META_CRYPTO_KEY={{ op://Local AI Packaged/Supabase/pg_meta_crypto_key }}
+
+############
+# Ollama - Default local chat model
+############
+OLLAMA_MODEL=qwen3.5:9b
+
 N8N_HOSTNAME=n8n.tail0d6f8e.ts.net

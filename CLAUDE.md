@@ -33,7 +33,7 @@ Two Docker Compose stacks unified under project `localai`:
 
 **Main stack** (`docker-compose.yml`): n8n, Open WebUI, Flowise, Ollama, Qdrant, Neo4j, SearXNG, Caddy, Langfuse (+ ClickHouse, MinIO, Redis, PostgreSQL)
 
-**Supabase stack** (`supabase/docker/docker-compose.yml`): PostgreSQL, Kong, PostgREST, GoTrue, Studio. Included via `include:` directive. The `supabase/` directory is auto-cloned on first run.
+**Supabase stack** (`supabase/docker/docker-compose.yml`): PostgreSQL, Kong, PostgREST, GoTrue, Studio. Included via `include:` directive. The `supabase/` directory is auto-cloned on first run and kept at the root repository's pinned revision.
 
 **Override files** control port exposure:
 - `docker-compose.override.private.yml` - exposes all ports to localhost (dev)

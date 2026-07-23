@@ -6,3 +6,4 @@ shared-backup/
 .env.test
 searxng/settings.yml
 searxng/uwsgi*
+.DS_Store
