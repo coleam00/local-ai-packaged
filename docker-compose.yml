@@ -51,7 +51,11 @@ x-init-ollama: &init-ollama
   entrypoint: /bin/sh
   command:
     - "-c"
-    - "sleep 3; OLLAMA_HOST=ollama:11434 ollama pull qwen2.5:7b-instruct-q4_K_M; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
+    - "sleep 3; OLLAMA_HOST=ollama:11434 ollama pull ${OLLAMA_MODEL:-qwen3.5:9b}; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
+    # For a larger context length verison of the model, run these commands:
+    # echo "FROM qwen3.5:9b\n\nPARAMETER num_ctx 8096" > Modelfile
+    # ollama create qwen3.5:9b-8k -f ./Modelfile
+    # Change the name of the LLM and num_ctx as you see fit.
 
 services:
   flowise:

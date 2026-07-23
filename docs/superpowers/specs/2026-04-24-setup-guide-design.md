@@ -45,7 +45,7 @@ Self-contained interactive HTML file at `docs/setup-guide.html`.
 |---|------|------|-----------------|
 | 3.1 | Install Ollama | AUTO | `brew install ollama` |
 | 3.2 | Start Ollama | AUTO | `ollama serve &`; verify `curl -s http://localhost:11434` |
-| 3.3 | Pull models | AUTO | `ollama pull qwen2.5:7b-instruct-q4_K_M && ollama pull nomic-embed-text` |
+| 3.3 | Pull models | AUTO | `ollama pull qwen3.5:9b && ollama pull nomic-embed-text` |
 
 ### Phase 4: Launch Stack (3 steps)
 
@@ -64,7 +64,7 @@ Self-contained interactive HTML file at `docs/setup-guide.html`.
 | 5.3 | Verify Qdrant | AUTO | http://localhost:6333/dashboard | curl health check + open dashboard |
 | 5.4 | Set up Neo4j | USER | http://localhost:7474 | Login with neo4j / password from NEO4J_AUTH. Change password if prompted. |
 | 5.5 | Set up Langfuse | USER | http://localhost:3000 | Create account → Create project → Note API keys for n8n integration |
-| 5.6 | Test end-to-end | USER | http://localhost:8080 | In Open WebUI, select qwen2.5 model and send a test message |
+| 5.6 | Test end-to-end | USER | http://localhost:8080 | In Open WebUI, select qwen3.5:9b and send a test message |
 
 ## Port Reference (Private Environment)
 

@@ -41,7 +41,8 @@ services:
   # The DockTail daemon: watches Docker labels, advertises/updates Tailscale Services,
   # proxies each to the container's IP on localai_default (direct mode, no host ports).
   docktail:
-    image: ghcr.io/marvinvr/docktail:latest   # TODO: pin by digest after reviewing the fork
+    # Multi-architecture manifest digest resolved from DockTail :latest on 2026-07-23.
+    image: ghcr.io/marvinvr/docktail@sha256:f3153fb80482755cfed0503b43236d8ae0a2351fd3a267231adcd34ea56c1c1b
     container_name: docktail
     depends_on:
       tailscale:

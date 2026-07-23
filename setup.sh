@@ -161,7 +161,10 @@ echo "Ollama is running"
 
 # 3.3 Pull models
 echo "Pulling AI models (this may take several minutes)..."
-ollama pull qwen2.5:7b-instruct-q4_K_M
+OLLAMA_MODEL="${OLLAMA_MODEL:-$(sed -n 's/^OLLAMA_MODEL=//p' .env | tail -n 1)}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3.5:9b}"
+echo "Pulling chat model: $OLLAMA_MODEL"
+ollama pull "$OLLAMA_MODEL"
 ollama pull nomic-embed-text
 
 echo ""
