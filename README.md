@@ -5,13 +5,12 @@ quickly bootstraps a fully featured Local AI and Low Code development
 environment including Ollama for your local LLMs, Open WebUI for an interface to chat with your N8N agents, and Supabase for your database, vector store, and authentication. 
 
 This is Cole's version with a couple of improvements and the addition of Supabase, Open WebUI, Flowise, Neo4j, Langfuse, SearXNG, and Caddy!
-Also, the local RAG AI Agent workflows from the video will be automatically in your 
-n8n instance if you use this setup instead of the base one provided by n8n!
+Pre-built RAG AI Agent workflows from the video are included in `n8n/backup/workflows/` - see [Importing Starter Workflows](#importing-starter-workflows) for setup instructions.
 
 > [!IMPORTANT]
-> **Pulling the latest changes after having the package running already?** Supabase keeps moving environment variables out of its Docker Compose file and into `.env`, so you may need to add new defaults that are already in my `.env.example`. Most recently, the Storage service started requiring its own config in `.env` — if it's missing, the `supabase-storage` container crashes on startup with a `region is missing` error. Add the following to your `.env`:
+> **Pulling the latest changes after having the package running already?** Supabase keeps moving environment variables out of its Docker Compose file and into `.env`. Since the February 26, 2026 storage-api update, the Storage service requires its own configuration; if it is missing, `supabase-storage` crashes with a `region is missing` error. Add the following to your `.env`:
 >
-> ```
+> ```bash
 > REGION=stub
 > GLOBAL_S3_BUCKET=stub
 > STORAGE_TENANT_ID=stub
@@ -19,6 +18,8 @@ n8n instance if you use this setup instead of the base one provided by n8n!
 > S3_PROTOCOL_ACCESS_KEY_SECRET=850181e4652dd023b7a98c58ae0d2d34bd487ee0cc3254aed6eda37307425907
 > POOLER_DB_POOL_SIZE=5
 > ```
+>
+> These values are already included in `.env.example`. The `stub` values work for local file-based storage; use secure values for production S3 deployments.
 
 ## Important Links
 
@@ -169,7 +170,7 @@ python start_services.py --profile gpu-nvidia
 
 > [!NOTE]
 > If you have not used your Nvidia GPU with Docker before, please follow the
-> [Ollama Docker instructions](https://github.com/ollama/ollama/blob/main/docs/docker.md).
+> [Ollama Docker instructions](https://github.com/ollama/ollama/blob/main/docs/docker.mdx).
 
 ### For AMD GPU users on Linux
 
@@ -271,6 +272,19 @@ to the IP address of your cloud instance.
 - sudo mkdir -p /usr/local/lib/docker/cli-plugins
 - sudo ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
 
+## Importing Starter Workflows
+
+This package includes pre-built n8n workflows in the `n8n/backup/workflows/` folder. To import them:
+
+1. Open n8n at <http://localhost:5678/> (or your custom domain if deployed to the cloud)
+2. Go to your workflow list and click the three-dot menu or use **Import from File**
+3. Select the JSON files from the `n8n/backup/workflows/` folder on your local machine
+
+For detailed instructions, see the [official n8n import/export documentation](https://docs.n8n.io/workflows/export-import/).
+
+> [!NOTE]
+> You'll need to create credentials for each workflow after importing. See step 3 in Quick Start below.
+
 ## ⚡️ Quick start and usage
 
 The main component of the self-hosted AI starter kit is a docker compose file
@@ -281,16 +295,7 @@ to get started.
 1. Open <http://localhost:5678/> in your browser to set up n8n. You’ll only
    have to do this once. You are NOT creating an account with n8n in the setup here,
    it is only a local account for your instance!
-2. Open the **Workflows** view in n8n and select the workflow imported from
-   `n8n/backup/workflows/V1_Local_RAG_AI_Agent.json`. This is the baseline local
-   RAG agent (Ollama + Postgres chat memory + Qdrant). The startup
-   `n8n-import` container also imports these optional variants:
-
-   - `V2_Local_Supabase_RAG_AI_Agent.json` - Supabase-backed RAG
-   - `V3_Local_Agentic_RAG_AI_Agent.json` - multi-step agentic RAG
-
-   The URL path contains an instance-specific workflow ID, so use the workflow
-   name or source filename instead of a hard-coded `/workflow/...` URL.
+2. Import a workflow from `n8n/backup/workflows/` (see [Importing Starter Workflows](#importing-starter-workflows)), then open it from your workflow list. `V1_Local_RAG_AI_Agent.json` is the baseline local RAG agent (Ollama + Postgres chat memory + Qdrant); `V2_Local_Supabase_RAG_AI_Agent.json` provides Supabase-backed RAG, and `V3_Local_Agentic_RAG_AI_Agent.json` provides the multi-step agentic variant.
 3. Create credentials for every service:
    
    Ollama URL: http://ollama:11434
@@ -383,6 +388,10 @@ Here are solutions to common issues you might encounter:
 
 - **Linux GPU Support**: If you're having trouble running Ollama with GPU support on Linux, follow the [Ollama Docker instructions](https://github.com/ollama/ollama/blob/main/docs/docker.md).
 
+### n8n Node Issues
+
+- **Local File Trigger or Execute Command nodes not available**: Starting with n8n v2+, these nodes are disabled by default for security. To enable them, uncomment `NODES_EXCLUDE=[]` in the `x-n8n` section of `docker-compose.yml` and restart n8n. See [Accessing local files](#accessing-local-files) for detailed instructions.
+
 ## 👓 Recommended reading
 
 n8n is full of useful content for getting started quickly with its AI concepts
@@ -436,6 +445,26 @@ interact with the local filesystem.
 - [Read/Write Files from Disk](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.filesreadwrite/)
 - [Local File Trigger](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.localfiletrigger/)
 - [Execute Command](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executecommand/)
+
+**Enabling Local File Trigger and Execute Command nodes**
+
+Starting with n8n v2+, the `Local File Trigger` and `Execute Command` nodes are disabled by default for security reasons. To enable them in this local/self-hosted environment:
+
+1. Open `docker-compose.yml`
+2. Find the `x-n8n` section and uncomment the `NODES_EXCLUDE` line:
+   ```yaml
+   x-n8n: &service-n8n
+     image: n8nio/n8n:latest
+     environment:
+       # ... other variables ...
+       - NODES_EXCLUDE=[]
+   ```
+3. Restart the n8n container:
+   ```bash
+   docker compose -p localai -f docker-compose.yml --profile <your-profile> up -d n8n
+   ```
+
+See [n8n 2.0 Breaking Changes](https://docs.n8n.io/2-0-breaking-changes/#disable-executecommand-and-localfiletrigger-nodes-by-default) for more details.
 
 ## 📜 License
 
