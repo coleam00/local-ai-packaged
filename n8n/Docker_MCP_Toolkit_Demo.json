@@ -1,0 +1,74 @@
+{
+  "name": "Docker MCP Toolkit (Demo)",
+  "active": false,
+  "nodes": [
+    {
+      "id": "1f6a0b9a-1c1b-4c1f-9d8a-000000000001",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [100, 200],
+      "parameters": {
+        "options": {
+          "responseMode": "streaming"
+        }
+      }
+    },
+    {
+      "id": "1f6a0b9a-1c1b-4c1f-9d8a-000000000002",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [500, 200],
+      "parameters": {
+        "promptType": "auto",
+        "options": {
+          "systemMessage": "You are an assistant with access to the Docker MCP Toolkit gateway. The connected tool exposes every MCP server enabled in your Docker Desktop profile (context7, fetch, github-official, hugging-face, perplexity-ask, sequentialthinking, git, obsidian, n8n, dockerhub, desktop-commander, gemini-api-docs, excalidraw, playwright, …). Pick the right tool for each question and tell the user which tool you used."
+        }
+      }
+    },
+    {
+      "id": "1f6a0b9a-1c1b-4c1f-9d8a-000000000003",
+      "name": "Ollama Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [350, 450],
+      "parameters": {
+        "model": "qwen2.5:7b-instruct-q4_K_M",
+        "options": {}
+      }
+    },
+    {
+      "id": "1f6a0b9a-1c1b-4c1f-9d8a-000000000004",
+      "name": "Docker MCP Gateway",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [650, 450],
+      "parameters": {
+        "toolDescription": "Docker Desktop MCP Toolkit gateway. Exposes every MCP server in the active Docker profile: context7 (live library docs), fetch (URL → text), github-official (GitHub API), hugging-face, perplexity-ask, sequentialthinking, git, obsidian, n8n, dockerhub, desktop-commander, gemini-api-docs, excalidraw, playwright. Use for live docs, web fetching, GitHub queries, deep search, structured reasoning chains.",
+        "serverUrl": "http://host.docker.internal:8811/mcp",
+        "serverTransport": "httpStreamable",
+        "authentication": "bearerAuth",
+        "include": "all"
+      }
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [[{"node": "AI Agent", "type": "main", "index": 0}]]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Docker MCP Gateway": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
